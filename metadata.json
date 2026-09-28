@@ -1,0 +1,6 @@
+{
+  "name": "AcertoCerto",
+  "description": "AcertoCerto — cada questão aproxima você da aprovação.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
