@@ -5,7 +5,7 @@
 - As consultas de carregamento de questões recuperam até 10.000 registros por chamada (`.limit(10000)`).
 - A importação de JSON valida e persiste os lotes de questões refletindo integralmente o schema JSON oficial do AcertoCerto (`id`, `disciplina`, `assunto`, `ano`, `banca`, `prova`, `metadados`, `texto_associado`, `enunciado`, `tipo`, `alternativas`, `alternativa_certa`, `comentario_ia`, `pagina`, `explicacao`).
 - O script DDL completo para criação do schema e das tabelas está disponível em `/docs/supabase_setup.sql`.
-- A autenticação de usuários utiliza o `auth.users` nativo do Supabase.
+- A autenticação de usuários utiliza o `auth.users` nativo do Supabase com tela dedicada de login e cadastro (`supabase.auth.signInWithPassword` e `supabase.auth.signUp`), além de suporte a modo convidado/demonstração.
 - Em ambiente offline ou fallback, utiliza-se cache local para resiliência.
 
 ## Tabelas no Schema `acertocerto`

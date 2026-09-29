@@ -191,6 +191,87 @@ export default function App() {
     totalCount: number;
   } | null>(null);
 
+  // Supabase Auth States
+  const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [emailInput, setEmailInput] = useState<string>('');
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+  const [guestMode, setGuestMode] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isSupabaseConfigured() && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setAuthLoading(false);
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setAuthLoading(false);
+      });
+
+      return () => subscription.unsubscribe();
+    } else {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthSuccess(null);
+    if (!emailInput || !passwordInput) {
+      setAuthError("Preencha o e-mail e a senha.");
+      return;
+    }
+    if (!isSupabaseConfigured() || !supabase) {
+      setAuthError("Supabase não está configurado. Verifique as variáveis de ambiente.");
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      if (authMode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: emailInput,
+          password: passwordInput,
+        });
+        if (error) throw error;
+        showNotification("Login realizado com sucesso!");
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: emailInput,
+          password: passwordInput,
+        });
+        if (error) throw error;
+        setAuthSuccess("Conta criada com sucesso! Faça login para continuar.");
+        showNotification("Conta criada com sucesso!");
+        setAuthMode('login');
+      }
+    } catch (err: any) {
+      console.error("Erro de autenticação:", err);
+      setAuthError(err.message || "Erro ao autenticar. Verifique suas credenciais.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (isSupabaseConfigured() && supabase) {
+      await supabase.auth.signOut();
+    }
+    setSession(null);
+    setUser(null);
+    setGuestMode(false);
+    showNotification("Sessão encerrada com segurança.");
+  };
+
 
   const getDisciplineIcon = (name: string) => {
     const n = name.toLowerCase();
@@ -619,6 +700,105 @@ export default function App() {
   const progressPct = Math.round((answeredCount / 5) * 100);
   const aproveitamento = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
 
+  if (isSupabaseConfigured() && !session && !guestMode) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/40 shadow-lg space-y-6">
+          <div className="text-center space-y-2">
+            <div className="flex justify-center mb-2">
+              <LogoMark className="w-16 h-16" />
+            </div>
+            <h1 className="text-2xl font-bold text-on-surface">AcertoCerto</h1>
+            <p className="text-sm text-on-surface-variant">
+              Plataforma de Alta Performance para Concursos. Faça login usando sua conta do Supabase.
+            </p>
+          </div>
+
+          {authError && (
+            <div className="p-3 rounded-xl bg-error-container text-error text-xs font-semibold">
+              {authError}
+            </div>
+          )}
+
+          {authSuccess && (
+            <div className="p-3 rounded-xl bg-secondary-container text-secondary text-xs font-semibold">
+              {authSuccess}
+            </div>
+          )}
+
+          <div className="flex rounded-xl bg-surface-container-high p-1">
+            <button
+              type="button"
+              onClick={() => { setAuthMode('login'); setAuthError(null); setAuthSuccess(null); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'login' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant'}`}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAuthMode('signup'); setAuthError(null); setAuthSuccess(null); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'signup' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant'}`}
+            >
+              Criar Conta
+            </button>
+          </div>
+
+          <form onSubmit={handleAuthSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-on-surface mb-1">E-mail</label>
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="seu.email@exemplo.com"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:border-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-on-surface mb-1">Senha</label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:border-primary"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full py-3 rounded-xl bg-primary text-on-primary font-bold text-sm hover:bg-primary-container active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2"
+            >
+              {authLoading ? (
+                <span>Processando...</span>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-[20px]">
+                    {authMode === 'login' ? 'login' : 'person_add'}
+                  </span>
+                  <span>{authMode === 'login' ? 'Entrar na Plataforma' : 'Cadastrar Conta'}</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="pt-2 border-t border-outline-variant/30 text-center">
+            <button
+              type="button"
+              onClick={() => setGuestMode(true)}
+              className="text-xs text-primary font-semibold hover:underline"
+            >
+              Continuar como Convidado / Demonstração →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-background text-on-surface min-h-screen flex flex-col font-body-md antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
       {/* ================= TOP APP BAR ================= */}
@@ -809,6 +989,11 @@ export default function App() {
           </div>
 
           <div className="border-t border-outline-variant/30 pt-4 space-y-1">
+            {user?.email && (
+              <div className="px-3 py-2 text-xs font-medium text-on-surface-variant truncate">
+                Logado: <strong className="text-primary">{user.email}</strong>
+              </div>
+            )}
             <button
               onClick={() => setSchemaModalOpen(true)}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md text-left"
@@ -817,7 +1002,7 @@ export default function App() {
               <span>Ajuda & Schema</span>
             </button>
             <button
-              onClick={() => showNotification("Sessão encerrada com segurança.")}
+              onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-error hover:bg-error-container/50 transition-colors font-label-md text-label-md text-left"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>
