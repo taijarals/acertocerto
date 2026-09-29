@@ -192,6 +192,21 @@ export default function App() {
   } | null>(null);
 
 
+  const getDisciplineIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('constitucional')) return 'balance';
+    if (n.includes('administrativo')) return 'admin_panel_settings';
+    if (n.includes('português') || n.includes('portugues') || n.includes('língua') || n.includes('lingua')) return 'menu_book';
+    if (n.includes('matemática') || n.includes('matematica') || n.includes('raciocínio') || n.includes('raciocinio') || n.includes('exatas')) return 'calculate';
+    if (n.includes('informática') || n.includes('informatica') || n.includes('ti') || n.includes('tecnologia')) return 'computer';
+    if (n.includes('administração') || n.includes('administracao') || n.includes('gestão') || n.includes('gestao')) return 'business_center';
+    if (n.includes('penal') || n.includes('civil') || n.includes('processo') || n.includes('direito') || n.includes('leis')) return 'gavel';
+    if (n.includes('legislação') || n.includes('legislacao') || n.includes('normas')) return 'policy';
+    if (n.includes('financeira') || n.includes('orçamento') || n.includes('contabilidade') || n.includes('economia')) return 'account_balance';
+    if (n.includes('português') || n.includes('ingles') || n.includes('espanhol') || n.includes('idioma')) return 'language';
+    return 'library_books';
+  };
+
   const isQuestionValid = (q: Questao) => {
     return Boolean(
       q.id &&
@@ -815,28 +830,26 @@ export default function App() {
         <main className="flex-1 p-3 sm:p-6 lg:p-8 min-w-0 max-w-[1280px] mx-auto">
           {/* ================= TAB 0: HOME / INÍCIO ================= */}
           {activeTab === 'home' && (
-            <section className="space-y-6">
-              <div className="bg-surface-container-lowest p-6 sm:p-8 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <span className="px-2.5 py-1 rounded bg-primary-fixed text-on-primary-fixed text-label-sm font-label-sm font-bold uppercase tracking-wider">
-                      Plataforma de Alta Performance
+            <section className="space-y-4">
+              <div className="bg-surface-container-lowest p-4 sm:p-5 rounded-xl border border-outline-variant/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed text-[10px] font-bold uppercase tracking-wider">
+                      AcertoCerto
                     </span>
-                    <h1 className="font-headline-lg text-headline-lg sm:font-headline-lg text-on-surface mt-2">
-                      AcertoCerto • Escolha sua Disciplina
-                    </h1>
-                    <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-                      <strong className="text-primary font-bold">AcertoCerto</strong> — cada questão aproxima você da aprovação. Selecione uma disciplina abaixo para iniciar instantaneamente um simulado de <strong className="text-primary font-bold">5 questões</strong>.
-                    </p>
+                    <span className="text-xs text-on-surface-variant">Escolha sua disciplina abaixo</span>
                   </div>
-                  <button
-                    onClick={() => handleNewRound(5)}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-on-primary font-label-md text-label-lg hover:bg-primary-container active:scale-95 shadow-md transition-all self-start md:self-auto"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">electric_bolt</span>
-                    <span>Gerar Rodada Mista (5Q)</span>
-                  </button>
+                  <h1 className="text-base sm:text-lg font-bold text-on-surface">
+                    Acelere sua aprovação com simulados direcionados
+                  </h1>
                 </div>
+                <button
+                  onClick={() => handleNewRound(5)}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary text-xs sm:text-sm font-semibold hover:bg-primary-container active:scale-95 shadow-sm transition-all whitespace-nowrap self-start sm:self-auto"
+                >
+                  <span className="material-symbols-outlined text-[18px]">electric_bolt</span>
+                  <span>Simulado Misto (5Q)</span>
+                </button>
               </div>
 
               {/* Disciplines Grid */}
@@ -845,7 +858,7 @@ export default function App() {
                   <span className="material-symbols-outlined text-primary">library_books</span>
                   <span>Disciplinas</span>
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
                   {(() => {
                     const map = new Map<string, { count: number; bancas: Set<string> }>();
                     questions.forEach(q => {
@@ -860,7 +873,7 @@ export default function App() {
                     const dynamicList = Array.from(map.entries()).map(([name, data]) => ({
                       name,
                       count: `${data.count} ${data.count === 1 ? 'questão' : 'questões'}`,
-                      icon: 'library_books',
+                      icon: getDisciplineIcon(name),
                       desc: `Questões cadastradas no acervo para ${name}.`,
                       banca: data.bancas.size > 0 ? Array.from(data.bancas).slice(0, 3).join(' / ') : 'Variadas'
                     }));
@@ -880,33 +893,37 @@ export default function App() {
                     return dynamicList.map((disc) => (
                       <div
                         key={disc.name}
-                        className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/60 shadow-sm hover:border-primary hover:shadow-md transition-all flex flex-col justify-between space-y-4 group"
+                        onClick={() => handleStartDisciplineSimulado(disc.name)}
+                        className="bg-surface-container-lowest p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-outline-variant/60 shadow-sm hover:border-primary hover:shadow-md transition-all flex flex-col justify-between space-y-3 sm:space-y-4 group cursor-pointer"
                       >
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                           <div className="flex items-center justify-between">
-                            <div className="w-12 h-12 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold shadow-sm group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                              <span className="material-symbols-outlined text-[24px]">{disc.icon}</span>
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold shadow-sm group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                              <span className="material-symbols-outlined text-[20px] sm:text-[24px]">{disc.icon}</span>
                             </div>
-                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-container-high text-on-surface-variant">
+                            <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold bg-surface-container-high text-on-surface-variant">
                               {disc.count}
                             </span>
                           </div>
                           <div>
-                            <h3 className="font-title-md font-bold text-on-surface text-lg group-hover:text-primary transition-colors">{disc.name}</h3>
-                            <p className="text-xs text-secondary font-semibold mt-0.5">Bancas: {disc.banca}</p>
-                            <p className="font-body-sm text-body-sm text-on-surface-variant mt-2 leading-relaxed">
+                            <h3 className="font-title-md font-bold text-on-surface text-sm sm:text-lg group-hover:text-primary transition-colors line-clamp-2 sm:line-clamp-none">{disc.name}</h3>
+                            <p className="text-[11px] sm:text-xs text-secondary font-semibold mt-0.5 hidden sm:block">Bancas: {disc.banca}</p>
+                            <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 sm:mt-2 leading-relaxed hidden sm:block">
                               {disc.desc}
                             </p>
                           </div>
                         </div>
 
-                        <div className="pt-2">
+                        <div className="pt-1 sm:pt-2">
                           <button
-                            onClick={() => handleStartDisciplineSimulado(disc.name)}
-                            className="w-full py-2.5 px-4 rounded-xl bg-surface-container-low text-primary font-label-md text-label-md hover:bg-primary hover:text-on-primary active:scale-[0.985] transition-all flex items-center justify-center gap-2 shadow-sm font-bold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartDisciplineSimulado(disc.name);
+                            }}
+                            className="w-full py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-surface-container-low text-primary font-label-md text-[11px] sm:text-label-md hover:bg-primary hover:text-on-primary active:scale-[0.985] transition-all flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm font-bold"
                           >
-                            <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                            <span>Iniciar Simulado (5Q)</span>
+                            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">play_arrow</span>
+                            <span>Simulado (5Q)</span>
                           </button>
                         </div>
                       </div>
