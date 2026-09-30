@@ -182,8 +182,8 @@ const MultiSelectDropdown = ({
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'inicio' | 'desafios' | 'simulado' | 'estatisticas' | 'gestao'>('inicio');
-  const [estatisticasSubTab, setEstatisticasSubTab] = useState<'geral' | 'materias' | 'habitos'>('geral');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'desafios' | 'simulado' | 'desempenho' | 'gestao'>('inicio');
+  const [desempenhoSubTab, setDesempenhoSubTab] = useState<'geral' | 'materias' | 'habitos'>('geral');
   const [gestaoSubTab, setGestaoSubTab] = useState<'auditoria' | 'importacao'>('auditoria');
   const [gestaoFilter, setGestaoFilter] = useState<'all' | 'pendentes' | 'completas'>('all');
   const [clearDbModalOpen, setClearDbModalOpen] = useState<boolean>(false);
@@ -526,7 +526,7 @@ export default function App() {
     loadData();
   }, []);
 
-  const handleTabChange = (tab: 'inicio' | 'desafios' | 'simulado' | 'estatisticas' | 'gestao') => {
+  const handleTabChange = (tab: 'inicio' | 'desafios' | 'simulado' | 'desempenho' | 'gestao') => {
     if (tab === 'simulado') {
       setSimuladoStep('config');
       setRoundComplete(false);
@@ -560,10 +560,28 @@ export default function App() {
     setAnswers(newAnswers);
     setAnsweredState(true);
 
-    if (selectedOption === currentQ.alternativa_certa) {
+    const isCorrect = selectedOption === currentQ.alternativa_certa;
+
+    if (isCorrect) {
       showNotification("Parabéns! Resposta Correta!");
     } else {
       showNotification(`Incorreto. A opção certa é a Letra ${currentQ.alternativa_certa}.`);
+    }
+
+    // Persist to Supabase acertocerto.respostas_usuario table
+    if (isSupabaseConfigured() && supabase) {
+      const sb = supabase;
+      sb.auth.getSession().then(({ data: { session } }) => {
+        const userId = session?.user?.id || null;
+        sb.from('respostas_usuario').insert({
+          user_id: userId,
+          questao_id: currentQ.id,
+          resposta_usuario: selectedOption,
+          acertou: isCorrect
+        }).then(({ error }) => {
+          if (error) console.error('Erro ao salvar resposta no Supabase:', error);
+        });
+      });
     }
 
     if (newAnswers.filter(a => a !== null).length === activeRoundQuestions.length) {
@@ -1029,15 +1047,15 @@ export default function App() {
 
 
             <button
-              onClick={() => handleTabChange('estatisticas')}
+              onClick={() => handleTabChange('desempenho')}
               className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
-                activeTab === 'estatisticas'
+                activeTab === 'desempenho'
                   ? 'text-primary font-bold border-b-2 border-primary'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">insights</span>
-              <span>Estatísticas</span>
+              <span>Desempenho</span>
             </button>
 
             <button
@@ -1088,18 +1106,7 @@ export default function App() {
           } lg:flex flex-col justify-between p-4 bg-surface border-r border-outline-variant/30 flex-shrink-0`}
         >
           <div className="space-y-6">
-            <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/40 flex items-center gap-3">
-              <LogoMark className="w-10 h-10 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="font-title-md text-label-lg font-bold text-primary truncate">AcertoCerto Pro</p>
-                <p className="font-body-sm text-[11px] text-on-surface-variant truncate flex items-center gap-1.5 pt-0.5">
-                  <span className={`w-2 h-2 rounded-full ${dbConnected ? 'bg-secondary' : 'bg-outline/70'}`}></span>
-                  <span className="font-code-md text-[10px]">{dbConnected ? 'Supabase: acertocerto' : 'Modo Offline (Cache)'}</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1">
+            <div className="space-y-1 pt-2">
               <p className="px-3 text-[11px] font-bold text-outline uppercase tracking-wider mb-2">Painel de Estudos</p>
               <button
                 onClick={() => { setActiveTab('inicio'); setSidebarOpen(false); }}
@@ -1110,7 +1117,7 @@ export default function App() {
                 }`}
               >
                 <span className="material-symbols-outlined text-[20px]">dashboard</span>
-                <span>Início (Visão Geral)</span>
+                <span>Início</span>
               </button>
               <button
                 onClick={() => { setActiveTab('desafios'); setSidebarOpen(false); }}
@@ -1137,15 +1144,15 @@ export default function App() {
 
 
               <button
-                onClick={() => { handleTabChange('estatisticas'); setEstatisticasSubTab('geral'); setSidebarOpen(false); }}
+                onClick={() => { handleTabChange('desempenho'); setDesempenhoSubTab('geral'); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
-                  activeTab === 'estatisticas'
+                  activeTab === 'desempenho'
                     ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
                     : 'text-on-surface-variant hover:bg-surface-container-high'
                 }`}
               >
                 <span className="material-symbols-outlined text-[20px]">insights</span>
-                <span>Estatísticas & Desempenho</span>
+                <span>Desempenho</span>
               </button>
 
               <button
@@ -1157,7 +1164,7 @@ export default function App() {
                 }`}
               >
                 <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
-                <span>Gestão de Questões</span>
+                <span>Gestão</span>
               </button>
               <button
                 onClick={() => showNotification("Configurações do perfil ativas.")}
@@ -1175,13 +1182,6 @@ export default function App() {
                 Logado: <strong className="text-primary">{user.email}</strong>
               </div>
             )}
-            <button
-              onClick={() => setSchemaModalOpen(true)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md text-left"
-            >
-              <span className="material-symbols-outlined text-[18px]">help</span>
-              <span>Ajuda & Schema</span>
-            </button>
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-error hover:bg-error-container/50 transition-colors font-label-md text-label-md text-left"
@@ -1266,10 +1266,10 @@ export default function App() {
                     <p className="text-xs text-on-surface-variant">Curva acumulada de precisão nos simulados e rodadas</p>
                   </div>
                   <button
-                    onClick={() => { handleTabChange('estatisticas'); setEstatisticasSubTab('geral'); }}
+                    onClick={() => { handleTabChange('desempenho'); setDesempenhoSubTab('geral'); }}
                     className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
                   >
-                    <span>Ver Estatísticas Detalhadas</span>
+                    <span>Ver Desempenho Detalhado</span>
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                   </button>
                 </div>
@@ -1866,13 +1866,13 @@ export default function App() {
                       <button
                         onClick={() => {
                           setRoundComplete(false);
-                          handleTabChange('estatisticas');
-                          setEstatisticasSubTab('geral');
+                          handleTabChange('desempenho');
+                          setDesempenhoSubTab('geral');
                         }}
                         className="p-3.5 rounded-xl bg-surface-container text-on-surface font-label-md text-label-md font-bold hover:bg-surface-container-high active:scale-[0.99] transition-all flex items-center justify-center gap-2 border border-outline-variant/40"
                       >
                         <span className="material-symbols-outlined text-[20px]">bar_chart</span>
-                        <span>Ver Estatísticas & Desempenho</span>
+                        <span>Ver Desempenho</span>
                       </button>
 
                       <button
@@ -1907,36 +1907,36 @@ export default function App() {
 
 
 
-          {/* ================= TAB: ESTATÍSTICAS & DESEMPENHO ================= */}
-          {activeTab === 'estatisticas' && (
+          {/* ================= TAB: DESEMPENHO ================= */}
+          {activeTab === 'desempenho' && (
             <section className="space-y-6">
               {/* Top Segmented Sub-Tabs Bar (Geral | Matérias | Hábitos) */}
-              <div className="bg-[#5B21B6] p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
+              <div className="bg-primary p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
                 <button
-                  onClick={() => setEstatisticasSubTab('geral')}
+                  onClick={() => setDesempenhoSubTab('geral')}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    estatisticasSubTab === 'geral'
-                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                    desempenhoSubTab === 'geral'
+                      ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   Geral
                 </button>
                 <button
-                  onClick={() => setEstatisticasSubTab('materias')}
+                  onClick={() => setDesempenhoSubTab('materias')}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    estatisticasSubTab === 'materias'
-                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                    desempenhoSubTab === 'materias'
+                      ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   Matérias
                 </button>
                 <button
-                  onClick={() => setEstatisticasSubTab('habitos')}
+                  onClick={() => setDesempenhoSubTab('habitos')}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    estatisticasSubTab === 'habitos'
-                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                    desempenhoSubTab === 'habitos'
+                      ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
@@ -1987,7 +1987,7 @@ export default function App() {
               </div>
 
               {/* ================= SUB-TAB: GERAL ================= */}
-              {estatisticasSubTab === 'geral' && (
+              {desempenhoSubTab === 'geral' && (
                 <div className="space-y-6 animate-fadeIn">
                   {/* Seu Índice */}
                   <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
@@ -2172,7 +2172,7 @@ export default function App() {
               )}
 
               {/* ================= SUB-TAB: MATÉRIAS ================= */}
-              {estatisticasSubTab === 'materias' && (
+              {desempenhoSubTab === 'materias' && (
                 <div className="space-y-6 animate-fadeIn">
                   <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
@@ -2238,7 +2238,7 @@ export default function App() {
               )}
 
               {/* ================= SUB-TAB: HÁBITOS ================= */}
-              {estatisticasSubTab === 'habitos' && (
+              {desempenhoSubTab === 'habitos' && (
                 <div className="space-y-6 animate-fadeIn">
                   <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
@@ -2320,12 +2320,12 @@ export default function App() {
           {activeTab === 'gestao' && (
             <section className="space-y-6">
               {/* Top Segmented Sub-Tabs Bar (Auditoria | Importação de JSON) */}
-              <div className="bg-[#5B21B6] p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
+              <div className="bg-primary p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
                 <button
                   onClick={() => setGestaoSubTab('auditoria')}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     gestaoSubTab === 'auditoria'
-                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                      ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
@@ -2335,7 +2335,7 @@ export default function App() {
                   onClick={() => setGestaoSubTab('importacao')}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     gestaoSubTab === 'importacao'
-                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                      ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
@@ -2705,13 +2705,13 @@ export default function App() {
           <span className="text-label-sm font-label-sm">Simulado</span>
         </button>
         <button
-          onClick={() => handleTabChange('estatisticas')}
+          onClick={() => handleTabChange('desempenho')}
           className={`flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all ${
-            activeTab === 'estatisticas' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
+            activeTab === 'desempenho' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
           }`}
         >
           <span className="material-symbols-outlined text-[20px]">insights</span>
-          <span className="text-label-sm font-label-sm">Estatísticas</span>
+          <span className="text-label-sm font-label-sm">Desempenho</span>
         </button>
         <button
           onClick={() => setActiveTab('gestao')}
