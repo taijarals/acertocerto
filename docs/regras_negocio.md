@@ -17,3 +17,14 @@
 
 ## 4. Métricas e Desempenho
 - O sistema calcula o índice de acerto em tempo real para cada rodada ativa, bem como o tempo médio por questão.
+
+## 5. Configurações & Metas Pessoais de Estudo
+- O usuário pode acessar a tela de **Configurações** clicando no botão do menu lateral ou no avatar do perfil no topo.
+- Na tela de configurações, é possível definir:
+  - Metas de questões mínimas por dia.
+  - Metas de desafios mínimos por dia.
+  - Metas de simulados mínimos por semana.
+  - Percentual mínimo de aproveitamento geral desejado.
+  - Percentual mínimo de aproveitamento por matéria.
+  - Seleção interativa de matérias-alvo (foco do concurso).
+- As configurações são salvas com persistência local e confirmação imediata.

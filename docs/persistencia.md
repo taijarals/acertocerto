@@ -2,10 +2,11 @@
 
 ## Estratégia de Armazenamento e Supabase
 - O aplicativo conecta-se ao banco de dados **Supabase** utilizando o schema dedicado **`acertocerto`** (conforme Regra 6), garantindo que todos os dados relacionais de questões, respostas, simulados, desafios e favoritos fiquem isolados do schema `public`.
-- As consultas de carregamento de questões recuperam até 10.000 registros por chamada (`.limit(10000)`).
-- A importação de JSON valida e persiste os lotes de questões refletindo integralmente o schema JSON oficial do AcertoCerto (`id`, `disciplina`, `assunto`, `ano`, `banca`, `prova`, `metadados`, `texto_associado`, `enunciado`, `tipo`, `alternativas`, `alternativa_certa`, `comentario_ia`, `pagina`, `explicacao`).
+- As consultas de carregamento de questões recuperam registros no schema `acertocerto`.
+- A importação de JSON valida e persiste os lotes de questões refletindo integralmente o schema JSON oficial do AcertoCerto.
 - O script DDL completo para criação do schema e das tabelas está disponível em `/docs/supabase_setup.sql`.
-- A autenticação de usuários utiliza o `auth.users` nativo do Supabase com tela dedicada de login e cadastro (`supabase.auth.signInWithPassword` e `supabase.auth.signUp`), além de suporte a modo convidado/demonstração.
+- A autenticação de usuários utiliza o `auth.users` nativo do Supabase com tela dedicada de login e cadastro.
+- **Persistência de Rodadas e Desafios**: Ao resolver questões, o app persiste cada resposta individual na tabela `respostas_usuario`. Ao concluir uma rodada de **Desafio** ou **Simulado**, o sistema registra automaticamente a tentativa e os metadados correspondentes nas tabelas `desafios` e `tentativas_desafio` (para desafios) ou `simulados` e `tentativas_simulado` (para simulados).
 - Em ambiente offline ou fallback, utiliza-se cache local para resiliência.
 
 ## Tabelas no Schema `acertocerto`

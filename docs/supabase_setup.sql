@@ -111,7 +111,7 @@ CREATE POLICY "Permitir leitura de questões para todos" ON acertocerto.questoes
 CREATE POLICY "Permitir inserção de questões" ON acertocerto.questoes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Permitir gestão de respostas do próprio usuário" ON acertocerto.respostas_usuario FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de favoritos do próprio usuário" ON acertocerto.favoritos FOR ALL USING (true);
-CREATE POLICY "Permitir leitura de simulados" ON acertocerto.simulados FOR SELECT USING (true);
+CREATE POLICY "Permitir gestão de simulados" ON acertocerto.simulados FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de tentativas de simulado" ON acertocerto.tentativas_simulado FOR ALL USING (true);
-CREATE POLICY "Permitir leitura de desafios" ON acertocerto.desafios FOR SELECT USING (true);
+CREATE POLICY "Permitir gestão de desafios" ON acertocerto.desafios FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de tentativas de desafio" ON acertocerto.tentativas_desafio FOR ALL USING (true);

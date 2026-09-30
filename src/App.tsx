@@ -182,11 +182,51 @@ const MultiSelectDropdown = ({
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'inicio' | 'desafios' | 'simulado' | 'desempenho' | 'gestao'>('inicio');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'desafios' | 'simulado' | 'desempenho' | 'gestao' | 'configuracoes'>('inicio');
   const [desempenhoSubTab, setDesempenhoSubTab] = useState<'geral' | 'materias' | 'habitos'>('geral');
   const [gestaoSubTab, setGestaoSubTab] = useState<'auditoria' | 'importacao'>('auditoria');
   const [gestaoFilter, setGestaoFilter] = useState<'all' | 'pendentes' | 'completas'>('all');
   const [clearDbModalOpen, setClearDbModalOpen] = useState<boolean>(false);
+
+  // User Goals & Settings States
+  const [metaQuestoesDia, setMetaQuestoesDia] = useState<number>(() => {
+    const saved = localStorage.getItem('acertocerto_meta_questoes');
+    return saved ? Number(saved) : 20;
+  });
+  const [metaDesafiosDia, setMetaDesafiosDia] = useState<number>(() => {
+    const saved = localStorage.getItem('acertocerto_meta_desafios');
+    return saved ? Number(saved) : 2;
+  });
+  const [metaSimuladosSemana, setMetaSimuladosSemana] = useState<number>(() => {
+    const saved = localStorage.getItem('acertocerto_meta_simulados');
+    return saved ? Number(saved) : 1;
+  });
+  const [metaAproveitamentoGeral, setMetaAproveitamentoGeral] = useState<number>(() => {
+    const saved = localStorage.getItem('acertocerto_meta_aproveitamento');
+    return saved ? Number(saved) : 70;
+  });
+  const [metaAproveitamentoMateria, setMetaAproveitamentoMateria] = useState<number>(() => {
+    const saved = localStorage.getItem('acertocerto_meta_aprov_materia');
+    return saved ? Number(saved) : 65;
+  });
+  const [materiasAlvo, setMateriasAlvo] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('acertocerto_materias_alvo');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
+
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('acertocerto_meta_questoes', String(metaQuestoesDia));
+    localStorage.setItem('acertocerto_meta_desafios', String(metaDesafiosDia));
+    localStorage.setItem('acertocerto_meta_simulados', String(metaSimuladosSemana));
+    localStorage.setItem('acertocerto_meta_aproveitamento', String(metaAproveitamentoGeral));
+    localStorage.setItem('acertocerto_meta_aprov_materia', String(metaAproveitamentoMateria));
+    localStorage.setItem('acertocerto_materias_alvo', JSON.stringify(materiasAlvo));
+    showNotification("Configurações e metas pessoais salvas com sucesso!");
+  };
 
   const getQuestionPendencies = (q: Questao) => {
     const issues: string[] = [];
@@ -273,6 +313,7 @@ export default function App() {
   const [schemaModalOpen, setSchemaModalOpen] = useState<boolean>(false);
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
   const [roundComplete, setRoundComplete] = useState<boolean>(false);
+  const [roundType, setRoundType] = useState<'desafio' | 'simulado'>('desafio');
   const [simuladoStep, setSimuladoStep] = useState<'config' | 'quiz'>('config');
   const [selectedDisciplinas, setSelectedDisciplinas] = useState<string[]>([]);
   const [selectedAssuntos, setSelectedAssuntos] = useState<string[]>([]);
@@ -345,6 +386,34 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [guestMode, setGuestMode] = useState<boolean>(false);
+  const [dbStats, setDbStats] = useState<{ total: number; acertos: number; aproveitamento: number }>({
+    total: 0,
+    acertos: 0,
+    aproveitamento: 0
+  });
+
+  const fetchUserStats = async () => {
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('respostas_usuario')
+          .select('acertou');
+
+        if (!error && data) {
+          const total = data.length;
+          const acertos = data.filter((r: any) => r.acertou).length;
+          const aproveitamento = total > 0 ? Math.round((acertos / total) * 100) : 0;
+          setDbStats({ total, acertos, aproveitamento });
+        }
+      } catch (e) {
+        console.error("Erro ao carregar estatísticas de respostas_usuario:", e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchUserStats();
+  }, [session]);
 
   useEffect(() => {
     if (isSupabaseConfigured() && supabase) {
@@ -465,6 +534,74 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Round completion persistence effect for desafios & simulados tables
+  useEffect(() => {
+    if (roundComplete && isSupabaseConfigured() && supabase) {
+      const sb = supabase;
+      sb.auth.getSession().then(async ({ data: { session } }) => {
+        const userId = session?.user?.id || null;
+        try {
+          if (roundType === 'desafio') {
+            const { data: desafioData, error: desafioErr } = await sb.from('desafios').insert({
+              titulo: 'Desafio AcertoCerto',
+              descricao: 'Desafio gerado pelo sistema',
+              tipo: 'personalizado',
+              questoes_ids: activeRoundQuestions.map(q => q.id)
+            }).select('id').single();
+
+            if (desafioErr) {
+              console.error("Erro ao inserir em 'desafios' (verifique se a política RLS 'FOR ALL' está aplicada no Supabase):", desafioErr);
+            }
+
+            const desafioId = desafioData?.id || null;
+
+            const { error: tentativaErr } = await sb.from('tentativas_desafio').insert({
+              user_id: userId,
+              desafio_id: desafioId,
+              acertos: correctCount,
+              total_questoes: activeRoundQuestions.length,
+              tempo_gasto_segundos: timerSeconds,
+              concluido: true
+            });
+
+            if (tentativaErr) {
+              console.error("Erro ao inserir em 'tentativas_desafio':", tentativaErr);
+            }
+          } else {
+            const { data: simuladoData, error: simuladoErr } = await sb.from('simulados').insert({
+              titulo: 'Simulado Personalizado',
+              descricao: 'Simulado configurado pelo usuário',
+              quantidade_questoes: activeRoundQuestions.length,
+              configuracao: { disciplinas: selectedDisciplinas }
+            }).select('id').single();
+
+            if (simuladoErr) {
+              console.error("Erro ao inserir em 'simulados' (verifique se a política RLS 'FOR ALL' está aplicada no Supabase):", simuladoErr);
+            }
+
+            const simuladoId = simuladoData?.id || null;
+
+            const { error: tentativaSimulErr } = await sb.from('tentativas_simulado').insert({
+              user_id: userId,
+              simulado_id: simuladoId,
+              status: 'concluido',
+              acertos: correctCount,
+              total_questoes: activeRoundQuestions.length,
+              tempo_gasto_segundos: timerSeconds,
+              respostas: answers
+            });
+
+            if (tentativaSimulErr) {
+              console.error("Erro ao inserir em 'tentativas_simulado':", tentativaSimulErr);
+            }
+          }
+        } catch (err) {
+          console.error("Erro ao salvar tentativa de desafio/simulado no Supabase:", err);
+        }
+      });
+    }
+  }, [roundComplete]);
+
   // Supabase Schema "acertocerto" synchronization effect
   useEffect(() => {
     async function loadData() {
@@ -579,8 +716,30 @@ export default function App() {
           resposta_usuario: selectedOption,
           acertou: isCorrect
         }).then(({ error }) => {
-          if (error) console.error('Erro ao salvar resposta no Supabase:', error);
+          if (error) {
+            console.error('Erro ao salvar resposta no Supabase:', error);
+          } else {
+            setDbStats(prev => {
+              const newTotal = prev.total + 1;
+              const newAcertos = isCorrect ? prev.acertos + 1 : prev.acertos;
+              return {
+                total: newTotal,
+                acertos: newAcertos,
+                aproveitamento: newTotal > 0 ? Math.round((newAcertos / newTotal) * 100) : 0
+              };
+            });
+          }
         });
+      });
+    } else {
+      setDbStats(prev => {
+        const newTotal = prev.total + 1;
+        const newAcertos = isCorrect ? prev.acertos + 1 : prev.acertos;
+        return {
+          total: newTotal,
+          acertos: newAcertos,
+          aproveitamento: newTotal > 0 ? Math.round((newAcertos / newTotal) * 100) : 0
+        };
       });
     }
 
@@ -609,6 +768,7 @@ export default function App() {
   };
 
   const handleNewRound = (count = 5) => {
+    setRoundType('desafio');
     const pool = questions.length > 0 ? questions : SAMPLE_QUESTION_TEMPLATE;
     const shuffled = [...pool].sort(() => 0.5 - Math.random());
     const countToUse = Math.min(count, shuffled.length);
@@ -626,6 +786,7 @@ export default function App() {
   };
 
   const handleStartSimuladoConfig = () => {
+    setRoundType('simulado');
     if (availableCount === 0) {
       showNotification("Nenhuma questão encontrada para os filtros selecionados.");
       return;
@@ -645,13 +806,28 @@ export default function App() {
   };
 
   const handleStartDisciplineSimulado = (disciplina: string) => {
-    setSelectedDisciplinas([disciplina]);
-    setSelectedAssuntos([]);
-    setSelectedBancas([]);
-    setSelectedAnos([]);
-    setSimuladoStep('config');
+    setRoundType('desafio');
+    const pool = questions.length > 0 ? questions : SAMPLE_QUESTION_TEMPLATE;
+    const filtered = pool.filter(q => q.disciplina === disciplina);
+    const shuffled = [...filtered].sort(() => 0.5 - Math.random());
+    const countToUse = Math.min(5, shuffled.length);
+    const roundQuestions = shuffled.slice(0, countToUse);
+
+    if (roundQuestions.length === 0) {
+      showNotification(`Nenhuma questão encontrada para a disciplina ${disciplina}.`);
+      return;
+    }
+
+    setActiveRoundQuestions(roundQuestions);
+    setAnswers(new Array(roundQuestions.length).fill(null));
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setAnsweredState(false);
+    setTimerSeconds(0);
+    setRoundComplete(false);
+    setSimuladoStep('quiz');
+    showNotification(`Desafio de ${disciplina} iniciado com ${roundQuestions.length} questões!`);
     setActiveTab('simulado');
-    showNotification(`Configurar simulado para: ${disciplina}`);
   };
 
   const handleToggleFavorite = () => {
@@ -1088,8 +1264,12 @@ export default function App() {
                 {isDarkMode ? 'light_mode' : 'dark_mode'}
               </span>
             </button>
-            <div className="flex items-center gap-2 pl-1 cursor-pointer" title="Disciplinas">
-              <div className="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-bold text-xs">
+            <div 
+              onClick={() => setActiveTab('configuracoes')}
+              className="flex items-center gap-2 pl-1 cursor-pointer" 
+              title="Configurações e Perfil"
+            >
+              <div className="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-bold text-xs hover:opacity-95 transition-all">
                 AC
               </div>
             </div>
@@ -1167,8 +1347,12 @@ export default function App() {
                 <span>Gestão</span>
               </button>
               <button
-                onClick={() => showNotification("Configurações do perfil ativas.")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md text-left"
+                onClick={() => { setActiveTab('configuracoes'); setSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
+                  activeTab === 'configuracoes'
+                    ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
               >
                 <span className="material-symbols-outlined text-[20px]">settings</span>
                 <span>Configurações</span>
@@ -1239,8 +1423,12 @@ export default function App() {
                     <span className="text-[11px] sm:text-xs font-semibold text-on-surface-variant truncate">Aproveitamento</span>
                     <span className="material-symbols-outlined text-tertiary text-[18px] sm:text-[20px] shrink-0">insights</span>
                   </div>
-                  <p className="text-xl sm:text-3xl font-extrabold text-secondary">{aproveitamento}%</p>
-                  <p className="text-[10px] sm:text-xs text-on-surface-variant truncate">{correctCount} acertos de {answeredCount} resp.</p>
+                  <p className="text-xl sm:text-3xl font-extrabold text-secondary">
+                    {dbStats.total > 0 ? `${dbStats.aproveitamento}%` : `${aproveitamento}%`}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-on-surface-variant truncate">
+                    {dbStats.total > 0 ? `${dbStats.acertos} acertos de ${dbStats.total} resp.` : `${correctCount} acertos de ${answeredCount} resp.`}
+                  </p>
                 </div>
 
                 <div className="bg-surface-container-lowest p-3.5 sm:p-5 rounded-xl border border-outline-variant/40 shadow-sm space-y-1 sm:space-y-2">
@@ -1352,7 +1540,7 @@ export default function App() {
                           onClick={() => handleStartDisciplineSimulado(name)}
                           className="px-3 py-1.5 rounded-lg bg-surface text-primary text-xs font-semibold hover:bg-primary hover:text-on-primary transition-all border border-outline-variant/40 shrink-0"
                         >
-                          Desafiar (5Q)
+                          Desafio
                         </button>
                       </div>
                     ));
@@ -1454,7 +1642,7 @@ export default function App() {
                             className="w-full py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-surface-container-low text-primary font-label-md text-[11px] sm:text-label-md hover:bg-primary hover:text-on-primary active:scale-[0.985] transition-all flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm font-bold"
                           >
                             <span className="material-symbols-outlined text-[16px] sm:text-[18px]">play_arrow</span>
-                            <span>Simulado (5Q)</span>
+                            <span>Desafio</span>
                           </button>
                         </div>
                       </div>
@@ -2671,6 +2859,161 @@ export default function App() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ================= TAB: CONFIGURAÇÕES & METAS PESSOAIS ================= */}
+          {activeTab === 'configuracoes' && (
+            <section className="space-y-6 max-w-3xl mx-auto animate-fadeIn">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 pt-1 sm:bg-surface-container-lowest sm:p-6 sm:rounded-2xl sm:border sm:border-outline-variant/40 sm:shadow-sm">
+                <div>
+                  <span className="inline-block px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">
+                    Perfil & Metas Pessoais
+                  </span>
+                  <h1 className="text-lg sm:text-2xl font-bold text-on-surface">
+                    Configuração de Metas de Estudo
+                  </h1>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveConfig} className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-6">
+                {/* Metas Diárias & Semanais */}
+                <div className="space-y-4">
+                  <h3 className="font-title-md font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+                    <span className="material-symbols-outlined text-primary">target</span>
+                    <span>Metas Diárias & Semanais de Prática</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface mb-1">Mín. Questões / Dia</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="200"
+                        value={metaQuestoesDia}
+                        onChange={(e) => setMetaQuestoesDia(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:border-primary"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface mb-1">Mín. Desafios / Dia</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        value={metaDesafiosDia}
+                        onChange={(e) => setMetaDesafiosDia(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:border-primary"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface mb-1">Mín. Simulados / Semana</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={metaSimuladosSemana}
+                        onChange={(e) => setMetaSimuladosSemana(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:border-primary"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metas de Aproveitamento */}
+                <div className="space-y-4 pt-2">
+                  <h3 className="font-title-md font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+                    <span className="material-symbols-outlined text-secondary">insights</span>
+                    <span>Percentuais Mínimos de Aproveitamento</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface mb-1">Aproveitamento Geral Mínimo (%)</label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="100"
+                        value={metaAproveitamentoGeral}
+                        onChange={(e) => setMetaAproveitamentoGeral(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:border-primary"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface mb-1">Aproveitamento Mínimo por Matéria (%)</label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="100"
+                        value={metaAproveitamentoMateria}
+                        onChange={(e) => setMetaAproveitamentoMateria(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:border-primary"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seleção de Matérias-Alvo */}
+                <div className="space-y-4 pt-2">
+                  <h3 className="font-title-md font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+                    <span className="material-symbols-outlined text-tertiary">library_books</span>
+                    <span>Seleção de Matérias-Alvo (Foco do Concurso)</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto p-2 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                    {availableDisciplinas.length === 0 ? (
+                      <p className="text-xs text-outline italic p-2 text-center col-span-full">Nenhuma disciplina cadastrada no acervo.</p>
+                    ) : (
+                      availableDisciplinas.map(disc => {
+                        const isSelected = materiasAlvo.includes(disc);
+                        return (
+                          <div
+                            key={disc}
+                            onClick={() => {
+                              if (isSelected) {
+                                setMateriasAlvo(materiasAlvo.filter(d => d !== disc));
+                              } else {
+                                setMateriasAlvo([...materiasAlvo, disc]);
+                              }
+                            }}
+                            className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer text-xs transition-colors ${
+                              isSelected ? 'bg-primary-fixed/40 text-on-primary-fixed font-semibold border border-primary/30' : 'bg-surface-container-lowest hover:bg-surface-container text-on-surface border border-outline-variant/20'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {}}
+                              className="w-4 h-4 rounded text-primary focus:ring-primary accent-primary cursor-pointer pointer-events-none"
+                            />
+                            <span className="truncate flex-1 font-medium">{disc}</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Botão de Salvar */}
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 rounded-xl bg-primary text-on-primary font-bold text-sm hover:bg-primary-container active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">save</span>
+                    <span>Salvar Configurações e Metas</span>
+                  </button>
+                </div>
+              </form>
+            </section>
           )}
         </main>
       </div>
