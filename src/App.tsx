@@ -187,6 +187,28 @@ export default function App() {
   const [gestaoSubTab, setGestaoSubTab] = useState<'auditoria' | 'importacao'>('auditoria');
   const [gestaoFilter, setGestaoFilter] = useState<'all' | 'pendentes' | 'completas'>('all');
   const [clearDbModalOpen, setClearDbModalOpen] = useState<boolean>(false);
+  const [userInitials, setUserInitials] = useState<string>('AC');
+
+  useEffect(() => {
+    if (isSupabaseConfigured() && supabase) {
+      const sb = supabase;
+      sb.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.email) {
+          const email = session.user.email;
+          const parts = email.split('@')[0].split(/[\.\-_]/);
+          let initials = 'AC';
+          if (parts.length >= 2) {
+            initials = (parts[0][0] + parts[1][0]).toUpperCase();
+          } else if (parts[0].length >= 2) {
+            initials = parts[0].substring(0, 2).toUpperCase();
+          } else if (parts[0].length === 1) {
+            initials = parts[0].toUpperCase() + 'U';
+          }
+          setUserInitials(initials);
+        }
+      });
+    }
+  }, []);
 
   // User Goals & Settings States
   const [metaQuestoesDia, setMetaQuestoesDia] = useState<number>(() => {
@@ -217,7 +239,7 @@ export default function App() {
     return [];
   });
 
-  const handleSaveConfig = (e: React.FormEvent) => {
+  const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('acertocerto_meta_questoes', String(metaQuestoesDia));
     localStorage.setItem('acertocerto_meta_desafios', String(metaDesafiosDia));
@@ -225,8 +247,71 @@ export default function App() {
     localStorage.setItem('acertocerto_meta_aproveitamento', String(metaAproveitamentoGeral));
     localStorage.setItem('acertocerto_meta_aprov_materia', String(metaAproveitamentoMateria));
     localStorage.setItem('acertocerto_materias_alvo', JSON.stringify(materiasAlvo));
+
+    if (isSupabaseConfigured() && supabase) {
+      const sb = supabase;
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.user?.id) {
+          await sb.from('configuracoes_usuario').upsert({
+            user_id: session.user.id,
+            meta_questoes: metaQuestoesDia,
+            meta_desafios: metaDesafiosDia,
+            meta_simulados: metaSimuladosSemana,
+            meta_aproveitamento: metaAproveitamentoGeral,
+            meta_aprov_materia: metaAproveitamentoMateria,
+            materias_alvo: materiasAlvo,
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao salvar configurações no Supabase:", err);
+      }
+    }
+
     showNotification("Configurações e metas pessoais salvas com sucesso!");
   };
+
+  useEffect(() => {
+    if (isSupabaseConfigured() && supabase) {
+      const sb = supabase;
+      sb.auth.getSession().then(async ({ data: { session } }) => {
+        if (session?.user?.id) {
+          const { data, error } = await sb
+            .from('configuracoes_usuario')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+          if (data && !error) {
+            if (data.meta_questoes !== undefined) {
+              setMetaQuestoesDia(data.meta_questoes);
+              localStorage.setItem('acertocerto_meta_questoes', String(data.meta_questoes));
+            }
+            if (data.meta_desafios !== undefined) {
+              setMetaDesafiosDia(data.meta_desafios);
+              localStorage.setItem('acertocerto_meta_desafios', String(data.meta_desafios));
+            }
+            if (data.meta_simulados !== undefined) {
+              setMetaSimuladosSemana(data.meta_simulados);
+              localStorage.setItem('acertocerto_meta_simulados', String(data.meta_simulados));
+            }
+            if (data.meta_aproveitamento !== undefined) {
+              setMetaAproveitamentoGeral(data.meta_aproveitamento);
+              localStorage.setItem('acertocerto_meta_aproveitamento', String(data.meta_aproveitamento));
+            }
+            if (data.meta_aprov_materia !== undefined) {
+              setMetaAproveitamentoMateria(data.meta_aprov_materia);
+              localStorage.setItem('acertocerto_meta_aprov_materia', String(data.meta_aprov_materia));
+            }
+            if (data.materias_alvo) {
+              setMateriasAlvo(data.materias_alvo);
+              localStorage.setItem('acertocerto_materias_alvo', JSON.stringify(data.materias_alvo));
+            }
+          }
+        }
+      });
+    }
+  }, []);
 
   const getQuestionPendencies = (q: Questao) => {
     const issues: string[] = [];
@@ -392,6 +477,116 @@ export default function App() {
     aproveitamento: 0
   });
 
+  const [performanceHistory, setPerformanceHistory] = useState<{
+    daily: { day: string; vol: number; pct: number }[];
+    weekly: { label: string; pct: number }[];
+  }>({
+    daily: [
+      { day: 'Seg', vol: 0, pct: 0 },
+      { day: 'Ter', vol: 0, pct: 0 },
+      { day: 'Qua', vol: 0, pct: 0 },
+      { day: 'Qui', vol: 0, pct: 0 },
+      { day: 'Sex', vol: 0, pct: 0 },
+      { day: 'Sáb', vol: 0, pct: 0 },
+      { day: 'Dom', vol: 0, pct: 0 },
+    ],
+    weekly: [
+      { label: 'Sem 1', pct: 0 },
+      { label: 'Sem 2', pct: 0 },
+      { label: 'Sem 3', pct: 0 },
+      { label: 'Sem 4', pct: 0 },
+      { label: 'Atual', pct: 0 },
+    ]
+  });
+
+  const fetchPerformanceHistory = async () => {
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const sb = supabase;
+        const { data: respData } = await sb
+          .from('respostas_usuario')
+          .select('acertou, created_at')
+          .order('created_at', { ascending: true });
+
+        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const dailyMap: { [key: string]: { total: number; acertos: number } } = {
+          'Seg': { total: 0, acertos: 0 },
+          'Ter': { total: 0, acertos: 0 },
+          'Qua': { total: 0, acertos: 0 },
+          'Qui': { total: 0, acertos: 0 },
+          'Sex': { total: 0, acertos: 0 },
+          'Sáb': { total: 0, acertos: 0 },
+          'Dom': { total: 0, acertos: 0 },
+        };
+
+        if (respData) {
+          respData.forEach((r: any) => {
+            if (r.created_at) {
+              const d = new Date(r.created_at);
+              const dayName = dayNames[d.getDay()];
+              if (dailyMap[dayName]) {
+                dailyMap[dayName].total++;
+                if (r.acertou) dailyMap[dayName].acertos++;
+              }
+            }
+          });
+        }
+
+        const daily = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => {
+          const item = dailyMap[day];
+          const pct = item.total > 0 ? Math.round((item.acertos / item.total) * 100) : 0;
+          return { day, vol: item.total, pct };
+        });
+
+        // Weekly calculation (Sem 1, Sem 2, Sem 3, Sem 4, Atual) based on calendar weeks
+        const now = new Date();
+        const weekBuckets: { [key: number]: { total: number; acertos: number } } = {
+          1: { total: 0, acertos: 0 }, // Sem 1
+          2: { total: 0, acertos: 0 }, // Sem 2
+          3: { total: 0, acertos: 0 }, // Sem 3
+          4: { total: 0, acertos: 0 }, // Sem 4
+        };
+
+        if (respData) {
+          respData.forEach((r: any) => {
+            if (r.created_at) {
+              const d = new Date(r.created_at);
+              const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+              let w = 4;
+              if (diffDays > 21) w = 1;
+              else if (diffDays > 14) w = 2;
+              else if (diffDays > 7) w = 3;
+              else w = 4;
+
+              if (weekBuckets[w]) {
+                weekBuckets[w].total++;
+                if (r.acertou) weekBuckets[w].acertos++;
+              }
+            }
+          });
+        }
+
+        const sem1Pct = weekBuckets[1].total > 0 ? Math.round((weekBuckets[1].acertos / weekBuckets[1].total) * 100) : 0;
+        const sem2Pct = weekBuckets[2].total > 0 ? Math.round((weekBuckets[2].acertos / weekBuckets[2].total) * 100) : 0;
+        const sem3Pct = weekBuckets[3].total > 0 ? Math.round((weekBuckets[3].acertos / weekBuckets[3].total) * 100) : 0;
+        const sem4Pct = weekBuckets[4].total > 0 ? Math.round((weekBuckets[4].acertos / weekBuckets[4].total) * 100) : 0;
+        const atualPct = dbStats.aproveitamento || sem4Pct;
+
+        const weekly = [
+          { label: 'Sem 1', pct: sem1Pct },
+          { label: 'Sem 2', pct: sem2Pct },
+          { label: 'Sem 3', pct: sem3Pct },
+          { label: 'Sem 4', pct: sem4Pct },
+          { label: 'Atual', pct: atualPct },
+        ];
+
+        setPerformanceHistory({ daily, weekly });
+      } catch (e) {
+        console.error("Erro ao calcular histórico de desempenho:", e);
+      }
+    }
+  };
+
   const fetchUserStats = async () => {
     if (isSupabaseConfigured() && supabase) {
       try {
@@ -409,6 +604,7 @@ export default function App() {
         console.error("Erro ao carregar estatísticas de respostas_usuario:", e);
       }
     }
+    await fetchPerformanceHistory();
   };
 
   useEffect(() => {
@@ -1270,7 +1466,7 @@ export default function App() {
               title="Configurações e Perfil"
             >
               <div className="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-bold text-xs hover:opacity-95 transition-all">
-                AC
+                {userInitials}
               </div>
             </div>
           </div>
@@ -1464,18 +1660,12 @@ export default function App() {
 
                 <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-4">
                   <div className="flex items-end justify-between h-36 gap-2 pt-6 px-2">
-                    {[
-                      { label: 'Sem 1', pct: 65 },
-                      { label: 'Sem 2', pct: 72 },
-                      { label: 'Sem 3', pct: 78 },
-                      { label: 'Sem 4', pct: 85 },
-                      { label: 'Atual', pct: aproveitamento > 0 ? aproveitamento : 80 }
-                    ].map((bar, idx) => (
-                      <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                    {performanceHistory.weekly.map((bar, idx) => (
+                      <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end" title={`${bar.label}: ${bar.pct}%`}>
                         <span className="text-[11px] font-bold text-on-surface">{bar.pct}%</span>
                         <div 
                           className="w-full max-w-[48px] rounded-t-lg bg-primary transition-all duration-500 hover:bg-primary-container"
-                          style={{ height: `${Math.max(bar.pct, 15)}%` }}
+                          style={{ height: `${Math.max(bar.pct, bar.pct > 0 ? 15 : 5)}%` }}
                         ></div>
                         <span className="text-[11px] font-semibold text-on-surface-variant">{bar.label}</span>
                       </div>
@@ -2294,17 +2484,9 @@ export default function App() {
 
                       <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
                         <div className="flex items-end justify-between h-40 gap-3 pt-6 px-2">
-                          {[
-                            { day: 'Qua', vol: 15, pct: 80 },
-                            { day: 'Qui', vol: 0, pct: 0 },
-                            { day: 'Sex', vol: 0, pct: 0 },
-                            { day: 'Sáb', vol: 25, pct: 75 },
-                            { day: 'Dom', vol: 18, pct: 50 },
-                            { day: 'Seg', vol: 0, pct: 0 },
-                            { day: 'Ter', vol: 10, pct: 70 },
-                          ].map((item, idx) => (
-                            <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-                              <div className="w-full bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40 relative flex items-end justify-center pb-1" style={{ height: `${Math.max(item.vol * 3, 10)}px` }}>
+                          {performanceHistory.daily.map((item, idx) => (
+                            <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end" title={`${item.day}: ${item.vol} questões, ${item.pct}% de acerto`}>
+                              <div className="w-full bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40 relative flex items-center justify-center pb-1" style={{ height: `${Math.max(item.vol * 6, item.vol > 0 ? 25 : 10)}px` }}>
                                 <span className="text-[9px] font-bold text-primary">{item.vol}Q</span>
                               </div>
                               <span className="text-xs font-bold text-on-surface-variant">{item.day}</span>

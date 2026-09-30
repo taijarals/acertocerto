@@ -97,7 +97,19 @@ CREATE TABLE IF NOT EXISTS acertocerto.tentativas_desafio (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 10. Habilitar RLS (Row Level Security) nas tabelas
+-- 10. Tabela de Configurações e Metas do Usuário
+CREATE TABLE IF NOT EXISTS acertocerto.configuracoes_usuario (
+    user_id UUID PRIMARY KEY,
+    meta_questoes INTEGER DEFAULT 20,
+    meta_desafios INTEGER DEFAULT 2,
+    meta_simulados INTEGER DEFAULT 1,
+    meta_aproveitamento NUMERIC DEFAULT 70,
+    meta_aprov_materia NUMERIC DEFAULT 65,
+    materias_alvo JSONB,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 11. Habilitar RLS (Row Level Security) nas tabelas
 ALTER TABLE acertocerto.questoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.respostas_usuario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.favoritos ENABLE ROW LEVEL SECURITY;
@@ -105,8 +117,9 @@ ALTER TABLE acertocerto.simulados ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.tentativas_simulado ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.desafios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.tentativas_desafio ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.configuracoes_usuario ENABLE ROW LEVEL SECURITY;
 
--- 11. Políticas de Acesso
+-- 12. Políticas de Acesso
 CREATE POLICY "Permitir leitura de questões para todos" ON acertocerto.questoes FOR SELECT USING (true);
 CREATE POLICY "Permitir inserção de questões" ON acertocerto.questoes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Permitir gestão de respostas do próprio usuário" ON acertocerto.respostas_usuario FOR ALL USING (true);
@@ -115,3 +128,4 @@ CREATE POLICY "Permitir gestão de simulados" ON acertocerto.simulados FOR ALL U
 CREATE POLICY "Permitir gestão de tentativas de simulado" ON acertocerto.tentativas_simulado FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de desafios" ON acertocerto.desafios FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de tentativas de desafio" ON acertocerto.tentativas_desafio FOR ALL USING (true);
+CREATE POLICY "Permitir gestão de configurações do usuário" ON acertocerto.configuracoes_usuario FOR ALL USING (true);
