@@ -10,9 +10,10 @@
 ## 2. Conteúdo Gerado por IA
 - **Regra 4**: Todo conteúdo gerado por Inteligência Artificial (questões geradas sob demanda ou comentários aprofundados) deve obrigatoriamente possuir o campo `source: 'ai_generated'` (ou `ia: true`) e ser claramente sinalizado na interface para o usuário, diferenciando-o de questões oficiais de bancas examinadoras.
 
-## 3. Importação de JSON em Lote
+## 3. Área de Gestão Unificada (Auditoria & Importação de JSON)
+- A área de gestão foi dividida em duas sub-abas internas: **Auditoria de Questões** (para monitorar pendências, preenchimento e gerenciar/excluir registros da base) e **Importação de JSON** (para importação em lote de arquivos `.json` estruturados).
+- O antigo item de menu principal para importador JSON foi removido dos menus principais (barra de navegação superior, menu lateral e rodapé móvel), centralizando as operações de importação dentro da aba de **Gestão**.
 - O sistema aceita a importação simultânea de **múltiplos arquivos `.json`** estruturados conforme o Schema Universal AcertoCerto.
-- O leitor e validador processa todos os arquivos selecionados em lote, acumulando as questões na pré-visualização do acervo para auditoria e submissão unificada ao banco de dados.
 
 ## 4. Métricas e Desempenho
 - O sistema calcula o índice de acerto em tempo real para cada rodada ativa, bem como o tempo médio por questão.

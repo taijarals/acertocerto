@@ -12,15 +12,17 @@
 O **ConcursoQuest Pro** é uma aplicação web moderna desenvolvida em React 19, TypeScript e Tailwind CSS, estruturada como uma Single Page Application (SPA) de alta performance para estudos direcionados a concursos públicos (OAB, Tribunais, Bancas CESGRANRIO, FGV, CEBRASPE, etc.).
 
 ## Componentes Principais
-1. **Painel Home (Início)**: Dashboard principal com visão geral do ciclo de estudos e cartões de acesso rápido por disciplina para iniciar simulados direcionados de 5 questões instantaneamente.
-2. **Top Bar & Sidebar Navegacionais**: Permitem alternar entre Início, Simulado Ativo, Importador JSON, Estatísticas e Matérias.
-3. **Motor de Simulado (Canvas Central)**:
+1. **Painel Início (Visão Geral)**: Dashboard executivo com quadros de indicadores (KPIs de total de questões, disciplinas, aproveitamento geral), gráfico de evolução geral de desempenho e resumo detalhado por disciplina e assuntos.
+2. **Painel Desafios (Ex-Home)**: Tela dedicada à escolha de disciplinas e disparo instantâneo de simulados direcionados de 5 questões.
+3. **Top Bar & Sidebar Navegacionais**: Permitem alternar entre Início, Desafios, Simulado, Estatísticas e Gestão de Questões (com sub-abas de Auditoria e Importação de JSON).
+4. **Motor de Simulado & Tela de Configuração**:
+   - Tela de configuração prévia com filtros interdependentes (Disciplina, Assunto, Banca e Ano) com feedback em tempo real da quantidade de questões disponíveis na base.
+   - Seleção flexível de quantidade de questões (5, 10, 15 ou 20).
    - Apresentação de questões com metadados estruturados (Banca, Ano, Órgão, Disciplina, Assunto, ID).
-   - Seleção interativa de alternativas (A a E) com validação visual imediata.
-   - Gabarito Comentado com explicações didáticas e suporte a IA pedagógica (Gemini API).
-4. **Gerenciador e Importador de Questões JSON**:
-   - Validador de schema universal para importação de pacotes em `.json`.
-   - Tabela de visualização e filtros avançados.
+   - Seleção interativa de alternativas (A a E) com validação visual imediata e barra de progresso dinâmica.
+4. **Área de Gestão & Importação de JSON**:
+   - Sub-aba de Auditoria de Questões: monitoramento de pendências, contadores de completude e exclusão/gestão de registros.
+   - Sub-aba de Importação de JSON: validador de schema universal para importação em lote de arquivos `.json`.
 5. **Radar e Matriz de Navegação (Coluna Lateral Direita)**:
    - Cronômetro progressivo de rodada.
    - Matriz de navegação rápida do bloco de 5 questões com indicadores visuais de acerto/erro.

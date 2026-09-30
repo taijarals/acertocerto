@@ -87,8 +87,104 @@ const SAMPLE_QUESTION_TEMPLATE: Questao[] = [
   }
 ];
 
+const MultiSelectDropdown = ({
+  label,
+  options,
+  selectedValues,
+  onChange,
+  placeholder = "Todos"
+}: {
+  label: string;
+  options: string[];
+  selectedValues: string[];
+  onChange: (vals: string[]) => void;
+  placeholder?: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="relative space-y-1.5">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold text-on-surface uppercase tracking-wider">{label}</label>
+        {selectedValues.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="text-[11px] text-primary hover:underline font-semibold"
+          >
+            Limpar ({selectedValues.length})
+          </button>
+        )}
+      </div>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-3 rounded-xl bg-surface-container-low border border-outline-variant/50 text-on-surface text-sm font-medium flex items-center justify-between text-left focus:outline-none focus:border-primary shadow-sm"
+        >
+          <span className="truncate">
+            {selectedValues.length === 0
+              ? placeholder
+              : `${selectedValues.length} selecionada(s): ${selectedValues.join(', ')}`}
+          </span>
+          <span className="material-symbols-outlined text-outline text-[20px]">
+            {isOpen ? 'expand_less' : 'expand_more'}
+          </span>
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-30 mt-1 w-full bg-surface-container-lowest rounded-xl border border-outline-variant/50 shadow-xl max-h-60 overflow-y-auto p-2 space-y-1">
+            <div className="flex items-center justify-between pb-2 mb-1 border-b border-outline-variant/30 px-2">
+              <span className="text-[11px] font-bold text-on-surface-variant">Selecione uma ou mais opções</span>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="text-[11px] font-bold text-primary hover:underline"
+              >
+                Concluir
+              </button>
+            </div>
+
+            {options.length === 0 ? (
+              <p className="text-xs text-outline italic p-2 text-center">Nenhuma opção disponível</p>
+            ) : (
+              options.map(opt => {
+                const isChecked = selectedValues.includes(opt);
+                return (
+                  <div
+                    key={opt}
+                    onClick={() => {
+                      if (isChecked) {
+                        onChange(selectedValues.filter(v => v !== opt));
+                      } else {
+                        onChange([...selectedValues, opt]);
+                      }
+                    }}
+                    className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer text-xs transition-colors ${
+                      isChecked ? 'bg-primary-fixed/40 text-on-primary-fixed font-semibold' : 'hover:bg-surface-container-low text-on-surface'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded text-primary focus:ring-primary accent-primary cursor-pointer pointer-events-none"
+                    />
+                    <span className="truncate flex-1">{opt}</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'simulado' | 'importador' | 'estatisticas' | 'gestao'>('home');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'desafios' | 'simulado' | 'estatisticas' | 'gestao'>('inicio');
+  const [estatisticasSubTab, setEstatisticasSubTab] = useState<'geral' | 'materias' | 'habitos'>('geral');
+  const [gestaoSubTab, setGestaoSubTab] = useState<'auditoria' | 'importacao'>('auditoria');
   const [gestaoFilter, setGestaoFilter] = useState<'all' | 'pendentes' | 'completas'>('all');
   const [clearDbModalOpen, setClearDbModalOpen] = useState<boolean>(false);
 
@@ -177,6 +273,54 @@ export default function App() {
   const [schemaModalOpen, setSchemaModalOpen] = useState<boolean>(false);
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
   const [roundComplete, setRoundComplete] = useState<boolean>(false);
+  const [simuladoStep, setSimuladoStep] = useState<'config' | 'quiz'>('config');
+  const [selectedDisciplinas, setSelectedDisciplinas] = useState<string[]>([]);
+  const [selectedAssuntos, setSelectedAssuntos] = useState<string[]>([]);
+  const [selectedBancas, setSelectedBancas] = useState<string[]>([]);
+  const [selectedAnos, setSelectedAnos] = useState<string[]>([]);
+  const [configCount, setConfigCount] = useState<number>(5);
+  const [activeRoundQuestions, setActiveRoundQuestions] = useState<Questao[]>(() => questions.length > 0 ? questions.slice(0, 5) : SAMPLE_QUESTION_TEMPLATE.slice(0, 5));
+
+  const filteredQuestionsForConfig = questions.length > 0 ? questions : SAMPLE_QUESTION_TEMPLATE;
+
+  const availableDisciplinas = Array.from(new Set(filteredQuestionsForConfig.map((q: Questao) => q.disciplina).filter(Boolean))) as string[];
+
+  const availableAssuntos = Array.from(new Set(
+    filteredQuestionsForConfig
+      .filter((q: Questao) => selectedDisciplinas.length === 0 || (q.disciplina && selectedDisciplinas.includes(q.disciplina)))
+      .map((q: Questao) => q.assunto)
+      .filter(Boolean)
+  )) as string[];
+
+  const availableBancas = Array.from(new Set(
+    filteredQuestionsForConfig
+      .filter((q: Questao) => 
+        (selectedDisciplinas.length === 0 || (q.disciplina && selectedDisciplinas.includes(q.disciplina))) &&
+        (selectedAssuntos.length === 0 || (q.assunto && selectedAssuntos.includes(q.assunto)))
+      )
+      .map((q: Questao) => q.banca)
+      .filter(Boolean)
+  )) as string[];
+
+  const availableAnos = Array.from(new Set(
+    filteredQuestionsForConfig
+      .filter((q: Questao) => 
+        (selectedDisciplinas.length === 0 || (q.disciplina && selectedDisciplinas.includes(q.disciplina))) &&
+        (selectedAssuntos.length === 0 || (q.assunto && selectedAssuntos.includes(q.assunto))) &&
+        (selectedBancas.length === 0 || (q.banca && selectedBancas.includes(q.banca)))
+      )
+      .map((q: Questao) => q.ano)
+      .filter(Boolean)
+  )).sort().reverse() as string[];
+
+  const matchingFilteredQuestions = filteredQuestionsForConfig.filter((q: Questao) => {
+    if (selectedDisciplinas.length > 0 && (!q.disciplina || !selectedDisciplinas.includes(q.disciplina))) return false;
+    if (selectedAssuntos.length > 0 && (!q.assunto || !selectedAssuntos.includes(q.assunto))) return false;
+    if (selectedBancas.length > 0 && (!q.banca || !selectedBancas.includes(q.banca))) return false;
+    if (selectedAnos.length > 0 && (!q.ano || !selectedAnos.includes(q.ano))) return false;
+    return true;
+  });
+  const availableCount = matchingFilteredQuestions.length;
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [uploadFeedback, setUploadFeedback] = useState<{ filename: string; count: number } | null>(null);
   const [stagedQuestions, setStagedQuestions] = useState<Questao[]>([]);
@@ -382,6 +526,14 @@ export default function App() {
     loadData();
   }, []);
 
+  const handleTabChange = (tab: 'inicio' | 'desafios' | 'simulado' | 'estatisticas' | 'gestao') => {
+    if (tab === 'simulado') {
+      setSimuladoStep('config');
+      setRoundComplete(false);
+    }
+    setActiveTab(tab);
+  };
+
   const showNotification = (msg: string) => {
     setToastMessage(msg);
     setToastVisible(true);
@@ -390,7 +542,7 @@ export default function App() {
     }, 3000);
   };
 
-  const currentQ = questions[currentIndex] || questions[0];
+  const currentQ = activeRoundQuestions[currentIndex] || activeRoundQuestions[0] || questions[0] || SAMPLE_QUESTION_TEMPLATE[0];
 
   const handleSelectOption = (letra: string) => {
     if (answeredState) return;
@@ -414,13 +566,13 @@ export default function App() {
       showNotification(`Incorreto. A opção certa é a Letra ${currentQ.alternativa_certa}.`);
     }
 
-    if (newAnswers.filter(a => a !== null).length === 5) {
+    if (newAnswers.filter(a => a !== null).length === activeRoundQuestions.length) {
       setRoundComplete(true);
     }
   };
 
   const handleNextQuestion = () => {
-    if (currentIndex < questions.length - 1 && currentIndex < 4) {
+    if (currentIndex < activeRoundQuestions.length - 1) {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
       setSelectedOption(answers[nextIdx]);
@@ -431,7 +583,7 @@ export default function App() {
   };
 
   const handleJumpToQuestion = (idx: number) => {
-    if (idx < questions.length) {
+    if (idx < activeRoundQuestions.length) {
       setCurrentIndex(idx);
       setSelectedOption(answers[idx]);
       setAnsweredState(answers[idx] !== null);
@@ -439,26 +591,49 @@ export default function App() {
   };
 
   const handleNewRound = (count = 5) => {
-    setAnswers(new Array(count).fill(null));
+    const pool = questions.length > 0 ? questions : SAMPLE_QUESTION_TEMPLATE;
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    const countToUse = Math.min(count, shuffled.length);
+    const roundQuestions = shuffled.slice(0, countToUse);
+    setActiveRoundQuestions(roundQuestions);
+    setAnswers(new Array(roundQuestions.length).fill(null));
     setCurrentIndex(0);
     setSelectedOption(null);
     setAnsweredState(false);
     setTimerSeconds(0);
     setRoundComplete(false);
-    showNotification(`Nova rodada de ${count} questões iniciada!`);
+    setSimuladoStep('quiz');
+    showNotification(`Rodada de ${roundQuestions.length} questões iniciada!`);
     setActiveTab('simulado');
   };
 
-  const handleStartDisciplineSimulado = (disciplina: string) => {
-    setSelectedSubjectFilter(disciplina);
-    setAnswers(new Array(5).fill(null));
+  const handleStartSimuladoConfig = () => {
+    if (availableCount === 0) {
+      showNotification("Nenhuma questão encontrada para os filtros selecionados.");
+      return;
+    }
+    const shuffled = [...matchingFilteredQuestions].sort(() => 0.5 - Math.random());
+    const countToUse = Math.min(configCount, availableCount);
+    const roundQuestions = shuffled.slice(0, countToUse);
+    setActiveRoundQuestions(roundQuestions);
+    setAnswers(new Array(roundQuestions.length).fill(null));
     setCurrentIndex(0);
     setSelectedOption(null);
     setAnsweredState(false);
     setTimerSeconds(0);
     setRoundComplete(false);
-    showNotification(`Simulado de 5 questões iniciado para: ${disciplina}`);
+    setSimuladoStep('quiz');
+    showNotification(`Simulado iniciado com ${roundQuestions.length} questões!`);
+  };
+
+  const handleStartDisciplineSimulado = (disciplina: string) => {
+    setSelectedDisciplinas([disciplina]);
+    setSelectedAssuntos([]);
+    setSelectedBancas([]);
+    setSelectedAnos([]);
+    setSimuladoStep('config');
     setActiveTab('simulado');
+    showNotification(`Configurar simulado para: ${disciplina}`);
   };
 
   const handleToggleFavorite = () => {
@@ -696,8 +871,8 @@ export default function App() {
   };
 
   const answeredCount = answers.filter(a => a !== null).length;
-  const correctCount = answers.filter((ans, idx) => ans !== null && ans === questions[idx]?.alternativa_certa).length;
-  const progressPct = Math.round((answeredCount / 5) * 100);
+  const correctCount = answers.filter((ans, idx) => ans !== null && ans === activeRoundQuestions[idx]?.alternativa_certa).length;
+  const progressPct = Math.round((answeredCount / (activeRoundQuestions.length || 5)) * 100);
   const aproveitamento = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
 
   if (isSupabaseConfigured() && !session && !guestMode) {
@@ -812,25 +987,36 @@ export default function App() {
             >
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
-            <div onClick={() => setActiveTab('simulado')}>
+            <div onClick={() => handleTabChange('simulado')}>
               <FullLogo />
             </div>
           </div>
 
           <nav className="hidden md:flex items-center space-x-6 h-full pt-1">
             <button
-              onClick={() => setActiveTab('home')}
+              onClick={() => setActiveTab('inicio')}
               className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
-                activeTab === 'home'
+                activeTab === 'inicio'
                   ? 'text-primary font-bold border-b-2 border-primary'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]">home</span>
+              <span className="material-symbols-outlined text-[18px]">dashboard</span>
               <span>Início</span>
             </button>
             <button
-              onClick={() => setActiveTab('simulado')}
+              onClick={() => setActiveTab('desafios')}
+              className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
+                activeTab === 'desafios'
+                  ? 'text-primary font-bold border-b-2 border-primary'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">bolt</span>
+              <span>Desafios</span>
+            </button>
+            <button
+              onClick={() => handleTabChange('simulado')}
               className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
                 activeTab === 'simulado'
                   ? 'text-primary font-bold border-b-2 border-primary'
@@ -840,19 +1026,10 @@ export default function App() {
               <span className="material-symbols-outlined text-[18px]">quiz</span>
               <span>Simulado</span>
             </button>
+
+
             <button
-              onClick={() => setActiveTab('importador')}
-              className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
-                activeTab === 'importador'
-                  ? 'text-primary font-bold border-b-2 border-primary'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">upload_file</span>
-              <span>Importação JSON</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('estatisticas')}
+              onClick={() => handleTabChange('estatisticas')}
               className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
                 activeTab === 'estatisticas'
                   ? 'text-primary font-bold border-b-2 border-primary'
@@ -862,6 +1039,7 @@ export default function App() {
               <span className="material-symbols-outlined text-[18px]">insights</span>
               <span>Estatísticas</span>
             </button>
+
             <button
               onClick={() => setActiveTab('gestao')}
               className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
@@ -924,18 +1102,29 @@ export default function App() {
             <div className="space-y-1">
               <p className="px-3 text-[11px] font-bold text-outline uppercase tracking-wider mb-2">Painel de Estudos</p>
               <button
-                onClick={() => { setActiveTab('home'); setSidebarOpen(false); }}
+                onClick={() => { setActiveTab('inicio'); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
-                  activeTab === 'home'
+                  activeTab === 'inicio'
                     ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
                     : 'text-on-surface-variant hover:bg-surface-container-high'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">home</span>
-                <span>Início (Home)</span>
+                <span className="material-symbols-outlined text-[20px]">dashboard</span>
+                <span>Início (Visão Geral)</span>
               </button>
               <button
-                onClick={() => { setActiveTab('simulado'); setSidebarOpen(false); }}
+                onClick={() => { setActiveTab('desafios'); setSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
+                  activeTab === 'desafios'
+                    ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[20px]">bolt</span>
+                <span>Desafios</span>
+              </button>
+              <button
+                onClick={() => { handleTabChange('simulado'); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
                   activeTab === 'simulado'
                     ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
@@ -943,30 +1132,22 @@ export default function App() {
                 }`}
               >
                 <span className="material-symbols-outlined text-[20px]">quiz</span>
-                <span>Simulado Ativo</span>
+                <span>Simulado</span>
               </button>
+
+
               <button
-                onClick={() => { setActiveTab('importador'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
-                  activeTab === 'importador'
-                    ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
-                    : 'text-on-surface-variant hover:bg-surface-container-high'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">upload_file</span>
-                <span>Importador JSON</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('estatisticas'); setSidebarOpen(false); }}
+                onClick={() => { handleTabChange('estatisticas'); setEstatisticasSubTab('geral'); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
                   activeTab === 'estatisticas'
                     ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
                     : 'text-on-surface-variant hover:bg-surface-container-high'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">analytics</span>
-                <span>Estatísticas & Histórico</span>
+                <span className="material-symbols-outlined text-[20px]">insights</span>
+                <span>Estatísticas & Desempenho</span>
               </button>
+
               <button
                 onClick={() => { setActiveTab('gestao'); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
@@ -1013,27 +1194,192 @@ export default function App() {
 
         {/* ================= CANVAS CONTENT AREA ================= */}
         <main className="flex-1 p-3 sm:p-6 lg:p-8 min-w-0 max-w-[1280px] mx-auto">
-          {/* ================= TAB 0: HOME / INÍCIO ================= */}
-          {activeTab === 'home' && (
-            <section className="space-y-4">
-              <div className="bg-surface-container-lowest p-4 sm:p-5 rounded-xl border border-outline-variant/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* ================= TAB 0: INÍCIO (VISÃO GERAL) ================= */}
+          {activeTab === 'inicio' && (
+            <section className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 pt-1 sm:bg-surface-container-lowest sm:p-6 sm:rounded-2xl sm:border sm:border-outline-variant/40 sm:shadow-sm">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed text-[10px] font-bold uppercase tracking-wider">
-                      AcertoCerto
-                    </span>
-                    <span className="text-xs text-on-surface-variant">Escolha sua disciplina abaixo</span>
+                  <span className="inline-block px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">
+                    Visão Geral & Indicadores
+                  </span>
+                  <h1 className="text-lg sm:text-2xl font-bold text-on-surface">
+                    Painel de Controle <span className="hidden sm:inline">• AcertoCerto</span>
+                  </h1>
+                </div>
+              </div>
+
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+                <div className="bg-surface-container-lowest p-3.5 sm:p-5 rounded-xl border border-outline-variant/40 shadow-sm space-y-1 sm:space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] sm:text-xs font-semibold text-on-surface-variant truncate">Total de Questões</span>
+                    <span className="material-symbols-outlined text-primary text-[18px] sm:text-[20px] shrink-0">database</span>
                   </div>
-                  <h1 className="text-base sm:text-lg font-bold text-on-surface">
-                    Acelere sua aprovação com simulados direcionados
+                  <p className="text-xl sm:text-3xl font-extrabold text-on-surface">{questions.length}</p>
+                  <p className="text-[10px] sm:text-xs text-secondary font-semibold truncate">Acervo ativo no Supabase</p>
+                </div>
+
+                <div className="bg-surface-container-lowest p-3.5 sm:p-5 rounded-xl border border-outline-variant/40 shadow-sm space-y-1 sm:space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] sm:text-xs font-semibold text-on-surface-variant truncate">Total de Disciplinas</span>
+                    <span className="material-symbols-outlined text-secondary text-[18px] sm:text-[20px] shrink-0">library_books</span>
+                  </div>
+                  <p className="text-xl sm:text-3xl font-extrabold text-on-surface">
+                    {(() => {
+                      const set = new Set<string>();
+                      questions.forEach(q => set.add(q.disciplina || 'Geral'));
+                      return set.size;
+                    })()}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-on-surface-variant truncate">Matérias cadastradas</p>
+                </div>
+
+                <div className="bg-surface-container-lowest p-3.5 sm:p-5 rounded-xl border border-outline-variant/40 shadow-sm space-y-1 sm:space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] sm:text-xs font-semibold text-on-surface-variant truncate">Aproveitamento</span>
+                    <span className="material-symbols-outlined text-tertiary text-[18px] sm:text-[20px] shrink-0">insights</span>
+                  </div>
+                  <p className="text-xl sm:text-3xl font-extrabold text-secondary">{aproveitamento}%</p>
+                  <p className="text-[10px] sm:text-xs text-on-surface-variant truncate">{correctCount} acertos de {answeredCount} resp.</p>
+                </div>
+
+                <div className="bg-surface-container-lowest p-3.5 sm:p-5 rounded-xl border border-outline-variant/40 shadow-sm space-y-1 sm:space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] sm:text-xs font-semibold text-on-surface-variant truncate">Validadas</span>
+                    <span className="material-symbols-outlined text-primary text-[18px] sm:text-[20px] shrink-0">check_circle</span>
+                  </div>
+                  <p className="text-xl sm:text-3xl font-extrabold text-on-surface">
+                    {questions.filter(q => getQuestionPendencies(q).length === 0).length}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-secondary font-semibold truncate">Prontas para simulados</p>
+                </div>
+              </div>
+
+              {/* General Evolution Chart / Trend */}
+              <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary">auto_graph</span>
+                      <span>Gráfico de Evolução Geral de Desempenho</span>
+                    </h2>
+                    <p className="text-xs text-on-surface-variant">Curva acumulada de precisão nos simulados e rodadas</p>
+                  </div>
+                  <button
+                    onClick={() => { handleTabChange('estatisticas'); setEstatisticasSubTab('geral'); }}
+                    className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
+                    <span>Ver Estatísticas Detalhadas</span>
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-4">
+                  <div className="flex items-end justify-between h-36 gap-2 pt-6 px-2">
+                    {[
+                      { label: 'Sem 1', pct: 65 },
+                      { label: 'Sem 2', pct: 72 },
+                      { label: 'Sem 3', pct: 78 },
+                      { label: 'Sem 4', pct: 85 },
+                      { label: 'Atual', pct: aproveitamento > 0 ? aproveitamento : 80 }
+                    ].map((bar, idx) => (
+                      <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                        <span className="text-[11px] font-bold text-on-surface">{bar.pct}%</span>
+                        <div 
+                          className="w-full max-w-[48px] rounded-t-lg bg-primary transition-all duration-500 hover:bg-primary-container"
+                          style={{ height: `${Math.max(bar.pct, 15)}%` }}
+                        ></div>
+                        <span className="text-[11px] font-semibold text-on-surface-variant">{bar.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Information by Discipline */}
+              <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">library_books</span>
+                    <span>Resumo por Disciplinas & Assuntos</span>
+                  </h2>
+                  <button
+                    onClick={() => setActiveTab('desafios')}
+                    className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
+                    <span>Ir para Desafios</span>
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(() => {
+                    const map = new Map<string, { count: number; assuntos: Set<string>; bancas: Set<string> }>();
+                    questions.forEach(q => {
+                      const disc = q.disciplina || 'Geral';
+                      if (!map.has(disc)) {
+                        map.set(disc, { count: 0, assuntos: new Set(), bancas: new Set() });
+                      }
+                      const item = map.get(disc)!;
+                      item.count++;
+                      if (q.assunto) item.assuntos.add(q.assunto);
+                      if (q.banca) item.bancas.add(q.banca);
+                    });
+
+                    const list = Array.from(map.entries());
+                    if (list.length === 0) {
+                      return (
+                        <p className="col-span-full text-center text-xs text-on-surface-variant py-8">
+                          Nenhuma disciplina cadastrada no sistema.
+                        </p>
+                      );
+                    }
+
+                    return list.map(([name, data]) => (
+                      <div key={name} className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/40 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold">
+                            <span className="material-symbols-outlined text-[20px]">{getDisciplineIcon(name)}</span>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-on-surface">{name}</h3>
+                            <p className="text-xs text-on-surface-variant mt-0.5">
+                              {data.count} {data.count === 1 ? 'questão' : 'questões'} • {data.assuntos.size} {data.assuntos.size === 1 ? 'assunto' : 'assuntos'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleStartDisciplineSimulado(name)}
+                          className="px-3 py-1.5 rounded-lg bg-surface text-primary text-xs font-semibold hover:bg-primary hover:text-on-primary transition-all border border-outline-variant/40 shrink-0"
+                        >
+                          Desafiar (5Q)
+                        </button>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ================= TAB: DESAFIOS ================= */}
+          {activeTab === 'desafios' && (
+            <section className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 pt-1 sm:bg-surface-container-lowest sm:p-6 sm:rounded-2xl sm:border sm:border-outline-variant/40 sm:shadow-sm">
+                <div>
+                  <span className="inline-block px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">
+                    Desafios & Prática
+                  </span>
+                  <h1 className="text-lg sm:text-2xl font-bold text-on-surface">
+                    Escolha sua disciplina ou matéria
                   </h1>
                 </div>
                 <button
                   onClick={() => handleNewRound(5)}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary text-xs sm:text-sm font-semibold hover:bg-primary-container active:scale-95 shadow-sm transition-all whitespace-nowrap self-start sm:self-auto"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-on-primary text-xs sm:text-sm font-semibold hover:bg-primary-container active:scale-95 shadow-sm transition-all whitespace-nowrap self-start sm:self-auto"
                 >
                   <span className="material-symbols-outlined text-[18px]">electric_bolt</span>
-                  <span>Simulado Misto (5Q)</span>
+                  <span>Desafio Misto (5Q)</span>
                 </button>
               </div>
 
@@ -1120,49 +1466,193 @@ export default function App() {
           )}
 
           {/* ================= TAB 1: SIMULADO ================= */}
-          {activeTab === 'simulado' && (
-            <section className="space-y-6">
-              {/* Main Question & Grid Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Question Card (8 Cols) */}
-                <div className="lg:col-span-8 space-y-4">
-                  {/* Subtle Round Indicator Bar before question */}
-                  <div className="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/50 shadow-sm flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-label-md font-bold text-primary">Questão {currentIndex + 1} de 5</span>
-                      <div className="h-4 w-px bg-outline-variant/50"></div>
-                      <span className="text-body-sm text-on-surface-variant">Acertos: <strong className="text-secondary">{correctCount} / {answeredCount}</strong></span>
-                    </div>
+          {activeTab === 'simulado' && simuladoStep === 'config' && (
+            <section className="space-y-6 max-w-3xl mx-auto">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 pt-1 sm:bg-surface-container-lowest sm:p-6 sm:rounded-2xl sm:border sm:border-outline-variant/40 sm:shadow-sm">
+                <div>
+                  <span className="inline-block px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">
+                    Configuração do Simulado
+                  </span>
+                  <h1 className="text-lg sm:text-2xl font-bold text-on-surface">
+                    Personalize sua Rodada de Questões
+                  </h1>
+                </div>
+              </div>
 
-                    <div className="flex items-center gap-1.5">
-                      {[0, 1, 2, 3, 4].map((i) => {
-                        const isCurrent = currentIndex === i;
-                        const userAns = answers[i];
-                        let dotClass = "w-7 h-7 rounded-lg font-label-sm text-xs font-semibold border border-outline-variant/60 bg-surface-container-low text-on-surface hover:bg-surface-container transition-all flex items-center justify-center";
-                        
-                        if (isCurrent) {
-                          dotClass = "w-7 h-7 rounded-lg font-label-sm text-xs font-bold bg-primary text-on-primary shadow-sm";
-                        } else if (userAns !== null) {
-                          if (userAns === questions[i]?.alternativa_certa) {
-                            dotClass = "w-7 h-7 rounded-lg font-label-sm text-xs font-bold bg-secondary-container text-secondary border-secondary";
-                          } else {
-                            dotClass = "w-7 h-7 rounded-lg font-label-sm text-xs font-bold bg-error-container text-error border-error";
-                          }
-                        }
+              <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-5">
+                {/* Multi-Select Dropdowns Section */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <MultiSelectDropdown
+                    label="Disciplinas / Matérias"
+                    options={availableDisciplinas}
+                    selectedValues={selectedDisciplinas}
+                    onChange={(vals) => {
+                      setSelectedDisciplinas(vals);
+                      setSelectedAssuntos([]);
+                      setSelectedBancas([]);
+                      setSelectedAnos([]);
+                    }}
+                    placeholder="Todas as Disciplinas"
+                  />
 
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => handleJumpToQuestion(i)}
-                            className={dotClass}
-                            title={`Questão ${i + 1}`}
-                          >
-                            {i + 1}
-                          </button>
-                        );
-                      })}
+                  <MultiSelectDropdown
+                    label="Assuntos"
+                    options={availableAssuntos}
+                    selectedValues={selectedAssuntos}
+                    onChange={(vals) => {
+                      setSelectedAssuntos(vals);
+                      setSelectedBancas([]);
+                      setSelectedAnos([]);
+                    }}
+                    placeholder="Todos os Assuntos"
+                  />
+
+                  <MultiSelectDropdown
+                    label="Bancas Examinadoras"
+                    options={availableBancas}
+                    selectedValues={selectedBancas}
+                    onChange={(vals) => {
+                      setSelectedBancas(vals);
+                      setSelectedAnos([]);
+                    }}
+                    placeholder="Todas as Bancas"
+                  />
+
+                  <MultiSelectDropdown
+                    label="Anos das Provas"
+                    options={availableAnos}
+                    selectedValues={selectedAnos}
+                    onChange={(vals) => setSelectedAnos(vals)}
+                    placeholder="Todos os Anos"
+                  />
+                </div>
+
+                {/* Real-time feedback */}
+                <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/30 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-primary text-[24px]">database</span>
+                    <div>
+                      <p className="text-xs font-semibold text-on-surface-variant">Questões disponíveis para este filtro:</p>
+                      <p className="text-lg font-extrabold text-on-surface">{availableCount} questões</p>
                     </div>
                   </div>
+                  {availableCount === 0 && (
+                    <span className="text-xs text-error font-bold bg-error-container/40 px-3 py-1 rounded-lg">
+                      Nenhuma questão encontrada
+                    </span>
+                  )}
+                </div>
+
+                {/* Quantity selection */}
+                <div className="space-y-2 pt-2">
+                  <label className="text-xs font-bold text-on-surface uppercase tracking-wider">Quantidade de Questões no Simulado</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[5, 10, 15, 20].map((num) => {
+                      const isSelected = configCount === num;
+                      const isExceeding = num > availableCount && availableCount > 0;
+                      return (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setConfigCount(num)}
+                          className={`p-3 rounded-xl border text-center transition-all ${
+                            isSelected
+                              ? 'bg-primary text-on-primary font-bold border-primary shadow-sm'
+                              : 'bg-surface-container-low text-on-surface border-outline-variant/50 hover:bg-surface-container'
+                          }`}
+                        >
+                          <span className="text-base font-bold">{num} Questões</span>
+                          {isExceeding && (
+                            <span className="block text-[10px] opacity-80 mt-0.5">(máx. {availableCount})</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Start Button */}
+                <div className="pt-4">
+                  <button
+                    onClick={handleStartSimuladoConfig}
+                    disabled={availableCount === 0}
+                    className={`w-full py-3.5 rounded-xl font-label-md text-label-md font-bold shadow-sm transition-all flex items-center justify-center gap-2 ${
+                      availableCount > 0
+                        ? 'bg-primary text-on-primary hover:bg-primary-container active:scale-[0.99]'
+                        : 'bg-surface-container text-outline cursor-not-allowed'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">electric_bolt</span>
+                    <span>Iniciar Simulado ({Math.min(configCount, availableCount)} Questões)</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'simulado' && simuladoStep === 'quiz' && (
+             <section className="space-y-6">
+               {/* Main Question & Grid Layout */}
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                 {/* Question Card (8 Cols) */}
+                 <div className="lg:col-span-8 space-y-4">
+                   {/* Subtle Round Indicator Bar before question */}
+                   <div className="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/50 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                     <div className="flex items-center gap-3">
+                       <span className="font-label-md font-bold text-primary">Questão {currentIndex + 1} de {activeRoundQuestions.length}</span>
+                       <div className="h-4 w-px bg-outline-variant/50"></div>
+                       <span className="text-body-sm text-on-surface-variant">Acertos: <strong className="text-secondary">{correctCount} / {activeRoundQuestions.length}</strong></span>
+                     </div>
+
+                     <div className="flex items-center gap-2">
+                       <button
+                         onClick={() => setRoundComplete(true)}
+                         className="px-3 py-1 rounded-lg bg-secondary text-on-secondary text-xs font-bold hover:bg-secondary-container hover:text-on-secondary-container transition-all flex items-center gap-1 shadow-sm"
+                         title="Finalizar Simulado"
+                       >
+                         <span className="material-symbols-outlined text-[16px]">flag</span>
+                         <span>Finalizar Simulado</span>
+                       </button>
+
+                       <button
+                         onClick={() => setSimuladoStep('config')}
+                         className="px-2.5 py-1 rounded-lg bg-surface-container text-on-surface-variant text-xs font-semibold hover:bg-surface-container-high transition-colors flex items-center gap-1"
+                         title="Configurar Filtros"
+                       >
+                         <span className="material-symbols-outlined text-[16px]">settings</span>
+                         <span>Configurar</span>
+                       </button>
+
+                       <div className="flex items-center gap-1.5 overflow-x-auto max-w-[200px] sm:max-w-none pb-1 sm:pb-0">
+                         {activeRoundQuestions.map((_, i) => {
+                           const isCurrent = currentIndex === i;
+                           const userAns = answers[i];
+                           let dotClass = "w-7 h-7 rounded-lg font-label-sm text-xs font-semibold border border-outline-variant/60 bg-surface-container-low text-on-surface hover:bg-surface-container transition-all flex items-center justify-center shrink-0";
+                           
+                           if (isCurrent) {
+                             dotClass = "w-7 h-7 rounded-lg font-label-sm text-xs font-bold bg-primary text-on-primary shadow-sm shrink-0";
+                           } else if (userAns !== null) {
+                             if (userAns === activeRoundQuestions[i]?.alternativa_certa) {
+                               dotClass = "w-7 h-7 rounded-lg font-label-sm text-xs font-bold bg-secondary-container text-secondary border-secondary shrink-0";
+                             } else {
+                               dotClass = "w-7 h-7 rounded-lg font-label-sm text-xs font-bold bg-error-container text-error border-error shrink-0";
+                             }
+                           }
+
+                           return (
+                             <button
+                               key={i}
+                               onClick={() => handleJumpToQuestion(i)}
+                               className={dotClass}
+                               title={`Questão ${i + 1}`}
+                             >
+                               {i + 1}
+                             </button>
+                           );
+                         })}
+                       </div>
+                     </div>
+                   </div>
 
                   <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/60 p-5 sm:p-7 shadow-sm transition-all duration-200">
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-outline-variant/30">
@@ -1290,7 +1780,7 @@ export default function App() {
                           className="px-4 py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-variant active:scale-[0.985] transition-all flex items-center gap-1.5"
                         >
                           <span>Próxima</span>
-                          <span className="text-xs text-on-surface-variant font-normal">({currentIndex + 1}/5)</span>
+                          <span className="text-xs text-on-surface-variant font-normal">({currentIndex + 1}/{activeRoundQuestions.length})</span>
                           <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                         </button>
                       </div>
@@ -1346,33 +1836,65 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Round Complete Modal */}
+              {/* Round Complete Modal (Popup Overlay) */}
               {roundComplete && (
-                <div className="p-6 sm:p-8 rounded-2xl bg-surface-container-lowest border-2 border-secondary shadow-lg space-y-5 animate-fadeIn">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
+                  <div className="max-w-xl w-full p-6 sm:p-8 rounded-3xl bg-surface-container-lowest border-2 border-secondary shadow-2xl space-y-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[32px]">emoji_events</span>
+                      <div className="w-16 h-16 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <span className="material-symbols-outlined text-[36px]">emoji_events</span>
                       </div>
-                      <div>
-                        <span className="text-label-sm font-label-sm uppercase font-bold text-secondary">Excelente ritmo de estudos!</span>
-                        <h2 className="font-headline-sm text-headline-sm font-bold text-on-surface">Rodada de 5 Questões Finalizada</h2>
-                        <p className="font-body-sm text-body-sm text-on-surface-variant">Seu aproveitamento neste bloco foi de {aproveitamento}%. Desempenho registrado.</p>
+                      <div className="space-y-1">
+                        <span className="text-label-sm font-label-sm uppercase font-bold text-secondary tracking-wider">Excelente ritmo de estudos!</span>
+                        <h2 className="font-headline-sm text-lg sm:text-xl font-bold text-on-surface">Rodada de {activeRoundQuestions.length} Questões Finalizada</h2>
+                        <p className="font-body-sm text-body-sm text-on-surface-variant">Seu aproveitamento neste bloco foi de <strong className="text-primary">{aproveitamento}%</strong>. Desempenho registrado com sucesso.</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                       <button
-                        onClick={() => handleNewRound(5)}
-                        className="px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container active:scale-95 transition-all shadow-sm flex items-center gap-2"
+                        onClick={() => {
+                          setRoundComplete(false);
+                          setSimuladoStep('config');
+                        }}
+                        className="p-3.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container active:scale-[0.99] transition-all shadow-sm flex items-center justify-center gap-2"
                       >
-                        <span className="material-symbols-outlined text-[18px]">bolt</span>
-                        <span>Nova Rodada de 5</span>
+                        <span className="material-symbols-outlined text-[20px]">settings</span>
+                        <span>Configurar Novo Simulado</span>
                       </button>
+
                       <button
-                        onClick={() => setActiveTab('importador')}
-                        className="px-4 py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-variant transition-colors"
+                        onClick={() => {
+                          setRoundComplete(false);
+                          handleTabChange('estatisticas');
+                          setEstatisticasSubTab('geral');
+                        }}
+                        className="p-3.5 rounded-xl bg-surface-container text-on-surface font-label-md text-label-md font-bold hover:bg-surface-container-high active:scale-[0.99] transition-all flex items-center justify-center gap-2 border border-outline-variant/40"
                       >
-                        Ver Banco Completo
+                        <span className="material-symbols-outlined text-[20px]">bar_chart</span>
+                        <span>Ver Estatísticas & Desempenho</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setRoundComplete(false);
+                          setActiveTab('desafios');
+                        }}
+                        className="p-3.5 rounded-xl bg-surface-container text-on-surface font-label-md text-label-md font-bold hover:bg-surface-container-high active:scale-[0.99] transition-all flex items-center justify-center gap-2 border border-outline-variant/40"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">bolt</span>
+                        <span>Fazer um Desafio</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setRoundComplete(false);
+                          setActiveTab('inicio');
+                        }}
+                        className="p-3.5 rounded-xl bg-surface-container text-on-surface font-label-md text-label-md font-bold hover:bg-surface-container-high active:scale-[0.99] transition-all flex items-center justify-center gap-2 border border-outline-variant/40"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">home</span>
+                        <span>Ir para Página Inicial</span>
                       </button>
                     </div>
                   </div>
@@ -1381,292 +1903,449 @@ export default function App() {
             </section>
           )}
 
-          {/* ================= TAB 2: IMPORTADOR & BANCO DE QUESTÕES ================= */}
-          {activeTab === 'importador' && (
-            <section className="space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container-low/50 p-4 sm:p-5 rounded-xl border border-outline-variant/20">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface text-label-sm font-label-sm font-bold uppercase">
-                      Ingestão Estruturada
-                    </span>
-                    <span className="text-label-sm font-label-sm text-outline">Schema Universal AcertoCerto</span>
-                  </div>
-                  <h1 className="font-headline-sm text-lg sm:text-xl font-bold text-on-surface">
-                    Importador & Gerenciador de Banco de Questões
-                  </h1>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-                    Carregue pacotes de questões em formato JSON para enriquecer o acervo offline e gerar simulados temáticos.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setSupabaseSqlModalOpen(true)}
-                    className="px-3.5 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-all flex items-center gap-2 border border-outline-variant/40 shadow-sm"
-                    title="Ver comando SQL para criar a tabela no Supabase"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">terminal</span>
-                    <span>SQL do Supabase</span>
-                  </button>
-                  <button
-                    onClick={handleDownloadTemplate}
-                    className="px-3.5 py-2 rounded-lg bg-secondary-fixed text-on-secondary-fixed font-label-md text-label-md hover:bg-secondary-fixed-dim active:scale-[0.985] transition-all flex items-center gap-2 shadow-sm"
-                    title="Baixar arquivo modelo em JSON"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">download</span>
-                    <span>Baixar JSON: questoes_gran.json</span>
-                  </button>
-                </div>
-              </div>
 
-              {/* KPI Bento Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/40 shadow-sm flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[24px]">database</span>
-                  </div>
-                  <div>
-                    <p className="font-body-sm text-xs text-on-surface-variant">Total no Banco Local</p>
-                    <p className="font-title-md text-xl font-bold text-on-surface">{questions.length} Questões</p>
-                    <p className="font-label-sm text-[11px] text-secondary font-semibold">100% Indexadas</p>
-                  </div>
-                </div>
-                <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/40 shadow-sm flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-xl bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[24px]">category</span>
-                  </div>
-                  <div>
-                    <p className="font-body-sm text-xs text-on-surface-variant">Matérias Mapeadas</p>
-                    <p className="font-title-md text-xl font-bold text-on-surface">{new Set(questions.map(q => q.disciplina).filter(Boolean)).size} Disciplinas</p>
-                    <p className="font-label-sm text-[11px] text-on-surface-variant">Base Ativa</p>
-                  </div>
-                </div>
-                <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/40 shadow-sm flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-xl bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[24px]">verified_user</span>
-                  </div>
-                  <div>
-                    <p className="font-body-sm text-xs text-on-surface-variant">Gabarito & Resoluções</p>
-                    <p className="font-title-md text-xl font-bold text-on-surface">100% Válidos</p>
-                    <p className="font-label-sm text-[11px] text-tertiary font-semibold">Sem inconsistências</p>
-                  </div>
-                </div>
-                <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/40 shadow-sm flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-xl bg-surface-container-high text-on-surface flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[24px]">speed</span>
-                  </div>
-                  <div>
-                    <p className="font-body-sm text-xs text-on-surface-variant">Taxa de Acerto Geral</p>
-                    <p className="font-title-md text-xl font-bold text-primary">82.3%</p>
-                    <p className="font-label-sm text-[11px] text-secondary font-semibold">+4.2% esta semana</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Upload Dropzone (Compact) */}
-              <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/40 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-title-md text-sm font-bold text-on-surface">Upload de Arquivo JSON</h2>
-                  <span className="text-xs font-code-md text-outline">.json / UTF-8</span>
-                </div>
 
-                <div className="relative border border-dashed border-outline-variant hover:border-primary rounded-xl p-4 text-center bg-surface cursor-pointer transition-all flex items-center justify-center gap-4 overflow-hidden">
-                  <input
-                    type="file"
-                    multiple
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    onChange={handleFileUpload}
-                  />
-                  <div className="w-10 h-10 rounded-full bg-primary-fixed text-primary flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-[20px]">upload_file</span>
-                  </div>
-                  <div className="text-left">
-                    <p className="font-title-md font-bold text-on-surface text-xs">Clique aqui para selecionar um ou vários arquivos .json</p>
-                    <p className="font-body-sm text-[11px] text-on-surface-variant">Carrega e valida o Schema Universal em lote</p>
-                  </div>
-                </div>
 
-                {uploadFeedback && (
-                  <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-between text-xs">
-                    <span className="font-code-md font-bold text-primary truncate">{uploadFeedback.filename}</span>
-                    <span className="text-on-surface-variant">{uploadFeedback.count} questões processadas</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Preview Table & Tabs */}
-              <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/50 shadow-sm p-5 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h2 className="font-title-md text-title-md font-bold text-on-surface">Pré-visualização do Acervo</h2>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">Valide as questões antes de submetê-las ao banco de dados.</p>
-                  </div>
-                  {previewTab === 'validadas' && stagedQuestions.filter(isQuestionValid).length > 0 && (
-                    <button
-                      onClick={handleSubmitValidatedToSupabase}
-                      className="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all shadow-sm flex items-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
-                      <span>Submeter Validadas ao Banco ({stagedQuestions.filter(isQuestionValid).length})</span>
-                    </button>
-                  )}
-                  {previewTab === 'pendentes' && stagedQuestions.filter(q => !isQuestionValid(q)).length > 0 && (
-                    <button
-                      onClick={handleRejectAllPending}
-                      className="px-4 py-2 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md hover:opacity-90 transition-all shadow-sm flex items-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-                      <span>Recusar Todas as Pendentes ({stagedQuestions.filter(q => !isQuestionValid(q)).length})</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Tabs */}
-                <div className="flex items-center gap-2 border-b border-outline-variant/30 pb-3">
-                  <button
-                    onClick={() => setPreviewTab('validadas')}
-                    className={`px-4 py-2 rounded-lg font-label-md text-label-md transition-all flex items-center gap-2 ${
-                      previewTab === 'validadas'
-                        ? 'bg-primary-fixed text-on-primary-fixed font-bold shadow-sm'
-                        : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
-                    }`}
-                  >
-                    <span>Validadas / Completas</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-secondary-container text-on-secondary-container font-bold">
-                      {stagedQuestions.filter(isQuestionValid).length}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setPreviewTab('pendentes')}
-                    className={`px-4 py-2 rounded-lg font-label-md text-label-md transition-all flex items-center gap-2 ${
-                      previewTab === 'pendentes'
-                        ? 'bg-primary-fixed text-on-primary-fixed font-bold shadow-sm'
-                        : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
-                    }`}
-                  >
-                    <span>Com Pendência</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-error-container text-on-error-container font-bold">
-                      {stagedQuestions.filter(q => !isQuestionValid(q)).length}
-                    </span>
-                  </button>
-                </div>
-
-                <div className="overflow-x-auto custom-scrollbar border border-outline-variant/30 rounded-xl">
-                  <table className="w-full text-left text-body-sm">
-                    <thead className="bg-surface-container-high text-on-surface text-label-md font-label-md border-b border-outline-variant/40">
-                      <tr>
-                        <th className="p-3">ID</th>
-                        <th className="p-3">Banca / Ano</th>
-                        <th className="p-3">Disciplina / Assunto</th>
-                        <th className="p-3 min-w-[280px]">Enunciado (Trecho)</th>
-                        <th className="p-3 text-center">Gabarito</th>
-                        <th className="p-3 text-right">Ação</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant/20 bg-surface-container-lowest">
-                      {(previewTab === 'validadas'
-                        ? stagedQuestions.filter(isQuestionValid)
-                        : stagedQuestions.filter(q => !isQuestionValid(q))
-                      ).length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="p-8 text-center text-on-surface-variant">
-                            {stagedQuestions.length === 0
-                              ? "Nenhum arquivo carregado ainda. Faça upload de um JSON para pré-visualizar."
-                              : previewTab === 'validadas'
-                                ? "Nenhuma questão validada encontrada no momento."
-                                : "Nenhuma questão com pendência encontrada. Todas estão perfeitamente preenchidas!"}
-                          </td>
-                        </tr>
-                      ) : (
-                        (previewTab === 'validadas'
-                          ? stagedQuestions.filter(isQuestionValid)
-                          : stagedQuestions.filter(q => !isQuestionValid(q))
-                        ).map((q) => {
-                          return (
-                            <tr key={q.id} className="hover:bg-surface-container-low transition-colors">
-                              <td className="p-3 font-code-md text-xs font-semibold text-primary">{q.id}</td>
-                              <td className="p-3">
-                                <span className="font-bold text-on-surface text-xs">{q.banca || "---"}</span>
-                                <span className="text-xs text-on-surface-variant block">{q.ano || "---"} • {q.prova || "---"}</span>
-                              </td>
-                              <td className="p-3">
-                                <span className="text-xs font-semibold text-secondary block">{q.disciplina || "Pendente"}</span>
-                                <span className="text-xs text-on-surface-variant truncate block max-w-[180px]">{q.assunto || "---"}</span>
-                              </td>
-                              <td className="p-3 text-xs text-on-surface leading-snug line-clamp-2">
-                                {q.enunciado}
-                              </td>
-                              <td className="p-3 text-center">
-                                <span className="w-6 h-6 inline-flex items-center justify-center rounded bg-secondary-container text-on-secondary-container font-bold text-xs">
-                                  {q.alternativa_certa || "?"}
-                                </span>
-                              </td>
-                              <td className="p-3 text-right">
-                                <button
-                                  onClick={() => handleRejectQuestion(q.id)}
-                                  className="px-2.5 py-1 rounded bg-error-container text-on-error-container text-xs font-label-md hover:opacity-90 transition-all"
-                                >
-                                  Remover
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* ================= TAB 3: ESTATÍSTICAS ================= */}
+          {/* ================= TAB: ESTATÍSTICAS & DESEMPENHO ================= */}
           {activeTab === 'estatisticas' && (
             <section className="space-y-6">
-              <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/40 shadow-sm space-y-6">
-                <h1 className="font-headline-sm text-headline-sm font-bold text-on-surface">Estatísticas Globais & Histórico de Rodadas</h1>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Acompanhe sua curva de retenção de memória e índice de acerto por banca examinadora.</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                    <p className="text-xs font-semibold text-on-surface-variant">Total de Questões Respondidas</p>
-                    <p className="text-2xl font-bold text-primary mt-1">428</p>
-                    <p className="text-xs text-secondary mt-1">▲ 32 hoje</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                    <p className="text-xs font-semibold text-on-surface-variant">Aproveitamento Médio Geral</p>
-                    <p className="text-2xl font-bold text-secondary mt-1">82.3%</p>
-                    <p className="text-xs text-on-surface-variant mt-1">Ideal para corte de 1ª fase</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                    <p className="text-xs font-semibold text-on-surface-variant">Tempo Médio por Questão</p>
-                    <p className="text-2xl font-bold text-on-surface mt-1">1 min 45 seg</p>
-                    <p className="text-xs text-tertiary mt-1">Dentro do teto de prova (2m30s)</p>
-                  </div>
-                </div>
+              {/* Top Segmented Sub-Tabs Bar (Geral | Matérias | Hábitos) */}
+              <div className="bg-[#5B21B6] p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
+                <button
+                  onClick={() => setEstatisticasSubTab('geral')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    estatisticasSubTab === 'geral'
+                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Geral
+                </button>
+                <button
+                  onClick={() => setEstatisticasSubTab('materias')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    estatisticasSubTab === 'materias'
+                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Matérias
+                </button>
+                <button
+                  onClick={() => setEstatisticasSubTab('habitos')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    estatisticasSubTab === 'habitos'
+                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Hábitos
+                </button>
+              </div>
 
-                <div className="p-6 rounded-xl bg-surface-container border border-outline-variant/30 text-center space-y-3">
-                  <span className="material-symbols-outlined text-[36px] text-primary">auto_graph</span>
-                  <h3 className="font-title-md font-bold text-on-surface">Relatório Completo de Disciplinas Ativo</h3>
-                  <p className="text-body-sm text-on-surface-variant max-w-lg mx-auto">
-                    Continue resolvendo simulados de 5 questões para calibrar a inteligência preditiva das suas matérias de maior vulnerabilidade.
-                  </p>
-                  <div className="pt-2">
-                    <button
-                      onClick={() => setActiveTab('simulado')}
-                      className="px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm"
-                    >
-                      Voltar ao Simulado Ativo
-                    </button>
+              {/* HOJE Widget (Top) */}
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Hoje</span>
+                  <span className="text-[11px] text-primary font-semibold">Atualizado em tempo real</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-outline-variant/30">
+                  <div className="flex items-center gap-3 pt-3 sm:pt-0">
+                    <div className="w-12 h-12 rounded-2xl bg-secondary-container/50 text-secondary flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[24px]">task_alt</span>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-on-surface">0</p>
+                      <p className="text-xs text-on-surface-variant">Questões hoje</p>
+                      <p className="text-[11px] text-error font-semibold mt-0.5">▼ 7 vs média 7d</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-3 sm:pt-0 sm:pl-4">
+                    <div className="w-12 h-12 rounded-2xl bg-primary-fixed/40 text-primary flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[24px]">schedule</span>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-primary">0 min</p>
+                      <p className="text-xs text-on-surface-variant">Tempo hoje</p>
+                      <p className="text-[11px] text-error font-semibold mt-0.5">▼ 6min vs média 7d</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-3 sm:pt-0 sm:pl-4">
+                    <div className="w-12 h-12 rounded-2xl bg-tertiary-container/50 text-tertiary flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[24px]">local_fire_department</span>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-tertiary">0</p>
+                      <p className="text-xs text-on-surface-variant">Sequência de dias</p>
+                      <p className="text-[11px] text-outline font-medium mt-0.5">Recorde: 2 dias</p>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* ================= SUB-TAB: GERAL ================= */}
+              {estatisticasSubTab === 'geral' && (
+                <div className="space-y-6 animate-fadeIn">
+                  {/* Seu Índice */}
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-title-md font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">speed</span>
+                        <span>Seu Índice Geral</span>
+                      </h2>
+                      <button onClick={() => showNotification("Índice calculado com base no seu aproveitamento e consistência.")} className="text-xs text-primary font-semibold hover:underline">
+                        Detalhes
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+                      <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-center space-y-1">
+                        <div className="w-14 h-14 mx-auto rounded-full border-4 border-secondary flex items-center justify-center font-bold text-secondary text-base">
+                          70%
+                        </div>
+                        <p className="text-xs font-bold text-on-surface pt-1">Acerto</p>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-center space-y-1">
+                        <div className="w-14 h-14 mx-auto rounded-full border-4 border-primary flex items-center justify-center font-bold text-primary text-base">
+                          36%
+                        </div>
+                        <p className="text-xs font-bold text-on-surface pt-1">Consistência</p>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-center space-y-1">
+                        <div className="w-14 h-14 mx-auto rounded-full border-4 border-tertiary flex items-center justify-center font-bold text-tertiary text-base">
+                          38%
+                        </div>
+                        <p className="text-xs font-bold text-on-surface pt-1">Evolução</p>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-primary-fixed/30 border border-primary/30 text-center space-y-1 flex flex-col justify-center">
+                        <p className="text-3xl font-extrabold text-primary">50</p>
+                        <p className="text-[11px] font-bold text-on-primary-fixed uppercase tracking-wider">Índice</p>
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-secondary text-on-secondary text-[10px] font-bold mt-1">NO CAMINHO</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Projeção */}
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-title-md font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-tertiary">trending_up</span>
+                        <span>Projeção de Desempenho</span>
+                      </h2>
+                      <span className="text-xs text-outline">Preditivo IA</span>
+                    </div>
+                    <p className="text-body-sm text-on-surface-variant leading-relaxed">
+                      Ainda não há dados ou melhora medida suficientes para estimar um prazo exato de aprovação. Continue resolvendo rodadas e simulados para acompanhar sua tendência de alta.
+                    </p>
+                  </div>
+
+                  {/* Conquistas & Badges */}
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-5">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-title-md font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-secondary">emoji_events</span>
+                        <span>Conquistas & Insígnias</span>
+                      </h2>
+                      <span className="text-xs font-bold text-primary">Ver todas</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                      {[
+                        { title: 'Certeiro', icon: '🎯', unlocked: true },
+                        { title: 'Meia Noção', icon: '📋', unlocked: true },
+                        { title: 'Dedicado', icon: '⏳', unlocked: false },
+                        { title: 'Leitor Ávido', icon: '📚', unlocked: false },
+                        { title: 'Velocidade', icon: '⏱️', unlocked: false },
+                        { title: 'Explosão', icon: '🚀', unlocked: false },
+                        { title: 'Em Chamas', icon: '🔥', unlocked: false },
+                        { title: 'Campeão', icon: '🏆', unlocked: false },
+                        { title: 'Enturmado', icon: '🛡️', unlocked: false },
+                        { title: 'Maratonista', icon: '🎖️', unlocked: false },
+                        { title: 'Pódio do Dia', icon: '🥇', unlocked: false },
+                      ].map((badge, idx) => (
+                        <div key={idx} className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center space-y-1.5 ${badge.unlocked ? 'bg-surface-container-low border-secondary/40 text-on-surface shadow-sm' : 'bg-surface-container/30 border-outline-variant/20 opacity-50 grayscale'}`}>
+                          <span className="text-2xl sm:text-3xl">{badge.icon}</span>
+                          <span className="text-[11px] font-bold truncate w-full">{badge.title}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-on-surface">Próxima Conquista: Meia Noção</span>
+                        <span className="text-outline">47 / 50 (faltam 3)</span>
+                      </div>
+                      <div className="w-full h-2.5 rounded-full bg-surface-container-high overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: '94%' }}></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Evolução Diária & Métricas Rápidas */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="font-title-md font-bold text-on-surface flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary">bar_chart</span>
+                            <span>Evolução Diária</span>
+                          </h2>
+                          <p className="text-xs text-on-surface-variant">Volume de questões vs. Acerto (%) nos últimos dias</p>
+                        </div>
+                        <select className="px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/40 text-xs font-semibold text-on-surface focus:outline-none">
+                          <option>7 dias</option>
+                          <option>30 dias</option>
+                        </select>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                        <div className="flex items-end justify-between h-40 gap-3 pt-6 px-2">
+                          {[
+                            { day: 'Qua', vol: 15, pct: 80 },
+                            { day: 'Qui', vol: 0, pct: 0 },
+                            { day: 'Sex', vol: 0, pct: 0 },
+                            { day: 'Sáb', vol: 25, pct: 75 },
+                            { day: 'Dom', vol: 18, pct: 50 },
+                            { day: 'Seg', vol: 0, pct: 0 },
+                            { day: 'Ter', vol: 10, pct: 70 },
+                          ].map((item, idx) => (
+                            <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                              <div className="w-full bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40 relative flex items-end justify-center pb-1" style={{ height: `${Math.max(item.vol * 3, 10)}px` }}>
+                                <span className="text-[9px] font-bold text-primary">{item.vol}Q</span>
+                              </div>
+                              <span className="text-xs font-bold text-on-surface-variant">{item.day}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/40 shadow-sm flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary-fixed/40 text-primary flex items-center justify-center font-bold">
+                          <span className="material-symbols-outlined text-[24px]">analytics</span>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-on-surface">68.2%</p>
+                          <p className="text-xs text-on-surface-variant font-medium">Aproveitamento Médio</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/40 shadow-sm flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-secondary-container/40 text-secondary flex items-center justify-center font-bold">
+                          <span className="material-symbols-outlined text-[24px]">list_alt</span>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-on-surface">3.1</p>
+                          <p className="text-xs text-on-surface-variant font-medium">Questões por dia</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/40 shadow-sm flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-tertiary-container/40 text-tertiary flex items-center justify-center font-bold">
+                          <span className="material-symbols-outlined text-[24px]">timer</span>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-on-surface">59s</p>
+                          <p className="text-xs text-on-surface-variant font-medium">Tempo por questão</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/40 shadow-sm flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary-fixed/40 text-primary flex items-center justify-center font-bold">
+                          <span className="material-symbols-outlined text-[24px]">hourglass_top</span>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-on-surface">3 min</p>
+                          <p className="text-xs text-on-surface-variant font-medium">Estudo diário médio</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= SUB-TAB: MATÉRIAS ================= */}
+              {estatisticasSubTab === 'materias' && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-primary-fixed/40 text-primary flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[26px]">menu_book</span>
+                      </div>
+                      <div>
+                        <h2 className="font-title-lg font-bold text-on-surface">Seu Retrato por Matéria</h2>
+                        <p className="text-body-sm text-on-surface-variant">Onde você está sólido, onde está caindo, e quanto tempo cada matéria te custa por questão.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(() => {
+                      const map = new Map<string, number>();
+                      questions.forEach(q => {
+                        const disc = q.disciplina || 'Geral';
+                        map.set(disc, (map.get(disc) || 0) + 1);
+                      });
+                      const subjects = Array.from(map.keys());
+                      if (subjects.length === 0) {
+                        return (
+                          <div className="col-span-full p-12 text-center bg-surface-container-low rounded-2xl border border-outline-variant/30">
+                            <p className="text-xs text-outline italic">Nenhuma matéria registrada no momento.</p>
+                          </div>
+                        );
+                      }
+                      return subjects.map((sub, i) => (
+                        <div key={sub} className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-title-md font-bold text-on-surface">{sub}</h3>
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-secondary-container/50 text-secondary">
+                              {i % 2 === 0 ? 'Sólido (82%)' : 'Em Atenção (61%)'}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-xs text-on-surface-variant">
+                              <span>Domínio na Matéria</span>
+                              <span className="font-bold text-on-surface">{i % 2 === 0 ? 'Alto' : 'Moderado'}</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+                              <div className={`h-full rounded-full ${i % 2 === 0 ? 'bg-secondary' : 'bg-tertiary'}`} style={{ width: i % 2 === 0 ? '82%' : '61%' }}></div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 pt-2">
+                            <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                              <p className="text-[11px] font-semibold text-outline">Ritmo Médio</p>
+                              <p className="text-sm font-bold text-on-surface mt-0.5">1 min 12 seg</p>
+                            </div>
+                            <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                              <p className="text-[11px] font-semibold text-outline">Última Prática</p>
+                              <p className="text-sm font-bold text-on-surface mt-0.5">Hoje</p>
+                            </div>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* ================= SUB-TAB: HÁBITOS ================= */}
+              {estatisticasSubTab === 'habitos' && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-tertiary-container/40 text-tertiary flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[26px]">psychology</span>
+                      </div>
+                      <div>
+                        <h2 className="font-title-lg font-bold text-on-surface">Quando Você Rende Mais</h2>
+                        <p className="text-body-sm text-on-surface-variant">A que horas você acerta mais, quão constante tem sido, e quanto do que errou você recupera.</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                      <div className="p-5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                        <h3 className="font-title-sm font-bold text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary text-[20px]">schedule</span>
+                          <span>Distribuição por Hora do Dia</span>
+                        </h3>
+                        <div className="space-y-2 text-xs">
+                          <div>
+                            <div className="flex justify-between font-semibold mb-1 text-on-surface-variant">
+                              <span>Manhã (06h - 12h)</span>
+                              <span>35% acerto</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: '35%' }}></div></div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between font-semibold mb-1 text-on-surface-variant">
+                              <span>Tarde (12h - 18h)</span>
+                              <span>45% acerto</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden"><div className="h-full bg-secondary rounded-full" style={{ width: '45%' }}></div></div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between font-semibold mb-1 text-on-surface-variant">
+                              <span>Noite (18h - 00h)</span>
+                              <span>15% acerto</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden"><div className="h-full bg-tertiary rounded-full" style={{ width: '15%' }}></div></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                        <h3 className="font-title-sm font-bold text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-secondary text-[20px]">verified</span>
+                          <span>Taxa de Recuperação de Erros</span>
+                        </h3>
+                        <div className="text-center py-4 space-y-2">
+                          <p className="text-4xl font-extrabold text-secondary">72%</p>
+                          <p className="text-xs text-on-surface-variant max-w-xs mx-auto">Você acerta 72% das questões que errou anteriormente após revisar o comentário pedagógico.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                      <h3 className="font-title-sm font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary text-[20px]">calendar_month</span>
+                        <span>Consistência das Últimas 6 Semanas & Calendário</span>
+                      </h3>
+                      <div className="grid grid-cols-6 gap-2 pt-2">
+                        {['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'].map((week, idx) => (
+                          <div key={idx} className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-1">
+                            <span className="text-[11px] font-bold text-outline">{week}</span>
+                            <div className="w-6 h-6 mx-auto rounded-full bg-secondary text-on-secondary flex items-center justify-center text-xs font-bold">
+                              {idx < 2 ? '✓' : '-'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
-          {/* ================= TAB: GESTÃO DE QUESTÕES ================= */}
+          {/* ================= TAB: GESTÃO & IMPORTAÇÃO ================= */}
           {activeTab === 'gestao' && (
             <section className="space-y-6">
-              <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/40 shadow-sm space-y-6">
+              {/* Top Segmented Sub-Tabs Bar (Auditoria | Importação de JSON) */}
+              <div className="bg-[#5B21B6] p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
+                <button
+                  onClick={() => setGestaoSubTab('auditoria')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    gestaoSubTab === 'auditoria'
+                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Auditoria de Questões
+                </button>
+                <button
+                  onClick={() => setGestaoSubTab('importacao')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    gestaoSubTab === 'importacao'
+                      ? 'bg-white text-[#5B21B6] shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Importação de JSON
+                </button>
+              </div>
+
+              {gestaoSubTab === 'auditoria' && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/40 shadow-sm space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <h1 className="font-headline-sm text-headline-sm font-bold text-on-surface flex items-center gap-2">
@@ -1748,7 +2427,7 @@ export default function App() {
                         Nenhuma questão cadastrada. Importe arquivos JSON na aba de Importação para começar.
                       </p>
                       <button
-                        onClick={() => setActiveTab('importador')}
+                        onClick={() => setGestaoSubTab('importacao')}
                         className="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm"
                       >
                         Ir para Importação JSON
@@ -1820,6 +2499,145 @@ export default function App() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+              {gestaoSubTab === 'importacao' && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/40 shadow-sm space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <h1 className="font-headline-sm text-headline-sm font-bold text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary">upload_file</span>
+                          <span>Importação de Questões (JSON)</span>
+                        </h1>
+                        <p className="font-body-sm text-body-sm text-on-surface-variant">Importe lotes de questões a partir de arquivos JSON estruturados para alimentar sua base.</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleDownloadTemplate}
+                          className="px-4 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high flex items-center gap-2 shadow-sm"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">download</span>
+                          <span>Baixar Modelo JSON</span>
+                        </button>
+                        <button
+                          onClick={() => setSchemaModalOpen(true)}
+                          className="px-4 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high flex items-center gap-2 shadow-sm"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">data_object</span>
+                          <span>Ver Schema</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Upload Dropzone */}
+                    <div className="p-8 border-2 border-dashed border-outline-variant/60 rounded-2xl bg-surface-container-low/50 text-center space-y-4 hover:border-primary transition-all relative">
+                      <input
+                        type="file"
+                        multiple
+                        accept=".json"
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        title="Selecione arquivos JSON"
+                      />
+                      <div className="w-16 h-16 mx-auto rounded-full bg-primary-fixed text-primary flex items-center justify-center shadow-inner">
+                        <span className="material-symbols-outlined text-[32px]">cloud_upload</span>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-title-md font-bold text-on-surface text-base">Clique aqui ou arraste arquivos .json</p>
+                        <p className="text-body-sm text-on-surface-variant">Suporta múltiplos arquivos JSON formatados com questões de concursos.</p>
+                      </div>
+                      {uploadFeedback && (
+                        <div className="p-3 bg-secondary-container/40 text-on-secondary-container rounded-xl text-xs font-semibold inline-block">
+                          Último upload: {uploadFeedback.filename} ({uploadFeedback.count} questões carregadas)
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Staged Preview */}
+                    {stagedQuestions.length > 0 && (
+                      <div className="space-y-4 pt-4 border-t border-outline-variant/30">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <h3 className="font-title-md font-bold text-on-surface">Pré-visualização do Lote ({stagedQuestions.length} questões)</h3>
+                            <p className="text-xs text-on-surface-variant">Valide os dados antes de submeter definitivamente para o banco Supabase.</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={handleRejectAllPending}
+                              className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface-variant text-xs font-bold hover:bg-surface-container-high"
+                            >
+                              Remover com Pendências
+                            </button>
+                            <button
+                              onClick={handleSubmitValidatedToSupabase}
+                              className="px-4 py-2 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary-container shadow-sm flex items-center gap-1.5"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">publish</span>
+                              <span>Submeter Validadas ({stagedQuestions.filter(isQuestionValid).length})</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                          {stagedQuestions.map(q => {
+                            const valid = isQuestionValid(q);
+                            const issues = getQuestionPendencies(q);
+                            return (
+                              <div key={q.id} className={`p-4 rounded-xl border ${valid ? 'bg-surface-container-low border-outline-variant/30' : 'bg-error-container/10 border-error/30'} flex flex-col md:flex-row md:items-center justify-between gap-4`}>
+                                <div className="space-y-1 min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-code-md bg-surface-container text-on-surface font-bold">
+                                      {q.id}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-primary-fixed/40 text-on-primary-fixed font-semibold">
+                                      {q.disciplina}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-surface-container text-on-surface-variant">
+                                      {q.banca}
+                                    </span>
+                                    {valid ? (
+                                      <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-secondary-fixed text-on-secondary-fixed font-semibold flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                        <span>Pronta</span>
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-error-container text-on-error-container font-semibold flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[14px]">warning</span>
+                                        <span>{issues.length} pendências</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="font-body-md text-sm text-on-surface line-clamp-2">{q.enunciado}</p>
+                                  {issues.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 pt-1">
+                                      {issues.map((iss, idx) => (
+                                        <span key={idx} className="text-[10px] font-code-md text-error bg-error-container/40 px-1.5 py-0.5 rounded">
+                                          • {iss}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <button
+                                    onClick={() => handleRejectQuestion(q.id)}
+                                    className="p-2 rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error transition-colors"
+                                    title="Remover da importação"
+                                  >
+                                    <span className="material-symbols-outlined text-[20px]">close</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -1860,16 +2678,25 @@ export default function App() {
       {/* ================= MOBILE BOTTOM NAVIGATION BAR ================= */}
       <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 border-t border-outline-variant/30 bg-surface-container-lowest/95 backdrop-blur-md md:hidden shadow-[0_-4px_16px_rgba(15,23,42,0.06)]">
         <button
-          onClick={() => setActiveTab('home')}
+          onClick={() => setActiveTab('inicio')}
           className={`flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all ${
-            activeTab === 'home' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
+            activeTab === 'inicio' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
           }`}
         >
-          <span className="material-symbols-outlined text-[20px]">home</span>
+          <span className="material-symbols-outlined text-[20px]">dashboard</span>
           <span className="text-label-sm font-label-sm">Início</span>
         </button>
         <button
-          onClick={() => setActiveTab('simulado')}
+          onClick={() => setActiveTab('desafios')}
+          className={`flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all ${
+            activeTab === 'desafios' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[20px]">bolt</span>
+          <span className="text-label-sm font-label-sm">Desafios</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('simulado')}
           className={`flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all ${
             activeTab === 'simulado' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
           }`}
@@ -1878,13 +2705,13 @@ export default function App() {
           <span className="text-label-sm font-label-sm">Simulado</span>
         </button>
         <button
-          onClick={() => setActiveTab('importador')}
+          onClick={() => handleTabChange('estatisticas')}
           className={`flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all ${
-            activeTab === 'importador' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
+            activeTab === 'estatisticas' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
           }`}
         >
-          <span className="material-symbols-outlined text-[20px]">upload_file</span>
-          <span className="text-label-sm font-label-sm">Importar</span>
+          <span className="material-symbols-outlined text-[20px]">insights</span>
+          <span className="text-label-sm font-label-sm">Estatísticas</span>
         </button>
         <button
           onClick={() => setActiveTab('gestao')}
