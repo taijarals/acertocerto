@@ -217,8 +217,9 @@ async function startServer() {
     });
   }
 
-  app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`AcertoCerto Pro running on port ${PORT}`);
+  const port = Number(process.env.PORT) || 3000;
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`AcertoCerto Pro running on port ${port}`);
   });
 }
 

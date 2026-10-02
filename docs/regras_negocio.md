@@ -18,6 +18,7 @@
 ## 4. Métricas e Desempenho
 - O sistema calcula o índice de acerto em tempo real para cada rodada ativa, bem como o tempo médio por questão.
 - Os gráficos de desempenho (Gráfico de Evolução Geral no Início e Evolução Diária na aba Desempenho) refletem o histórico real de respostas (`respostas_usuario`), tentativas de simulados (`tentativas_simulado`) e tentativas de desafios (`tentativas_desafio`) obtidos diretamente do Supabase.
+- O gráfico de evolução semanal exibe as colunas: **Sem 1**, **Sem 2**, **Sem 3**, **Sem 4** (períodos de 7 dias retroativos) e **Hoje** (desempenho exclusivo das questões resolvidas no dia corrente).
 
 ## 5. Configurações & Metas Pessoais de Estudo
 - O usuário pode acessar a tela de **Configurações** clicando no botão do menu lateral ou no avatar do perfil no topo.

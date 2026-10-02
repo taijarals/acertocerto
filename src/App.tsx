@@ -538,13 +538,17 @@ export default function App() {
           return { day, vol: item.total, pct };
         });
 
-        // Weekly calculation (Sem 1, Sem 2, Sem 3, Sem 4, Atual) based on calendar weeks
+        // Weekly calculation (Sem 1, Sem 2, Sem 3, Sem 4, Atual)
+        // Sem 1: > 21 days ago
+        // Sem 2: 15 to 21 days ago
+        // Sem 3: 8 to 14 days ago
+        // Sem 4: 0 to 7 days ago (past week)
         const now = new Date();
         const weekBuckets: { [key: number]: { total: number; acertos: number } } = {
-          1: { total: 0, acertos: 0 }, // Sem 1
-          2: { total: 0, acertos: 0 }, // Sem 2
-          3: { total: 0, acertos: 0 }, // Sem 3
-          4: { total: 0, acertos: 0 }, // Sem 4
+          1: { total: 0, acertos: 0 }, // Sem 1 (> 21 dias)
+          2: { total: 0, acertos: 0 }, // Sem 2 (15-21 dias)
+          3: { total: 0, acertos: 0 }, // Sem 3 (8-14 dias)
+          4: { total: 0, acertos: 0 }, // Sem 4 (0-7 dias / semana passada/atual recente)
         };
 
         if (respData) {
@@ -554,8 +558,8 @@ export default function App() {
               const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
               let w = 4;
               if (diffDays > 21) w = 1;
-              else if (diffDays > 14) w = 2;
-              else if (diffDays > 7) w = 3;
+              else if (diffDays >= 14) w = 2;
+              else if (diffDays >= 7) w = 3;
               else w = 4;
 
               if (weekBuckets[w]) {
@@ -570,14 +574,23 @@ export default function App() {
         const sem2Pct = weekBuckets[2].total > 0 ? Math.round((weekBuckets[2].acertos / weekBuckets[2].total) * 100) : 0;
         const sem3Pct = weekBuckets[3].total > 0 ? Math.round((weekBuckets[3].acertos / weekBuckets[3].total) * 100) : 0;
         const sem4Pct = weekBuckets[4].total > 0 ? Math.round((weekBuckets[4].acertos / weekBuckets[4].total) * 100) : 0;
-        const atualPct = dbStats.aproveitamento || sem4Pct;
+        
+        // Atual represents today's performance (questions answered today)
+        const todayStr = now.toDateString();
+        const todayResponses = respData ? respData.filter((r: any) => {
+          if (!r.created_at) return false;
+          return new Date(r.created_at).toDateString() === todayStr;
+        }) : [];
+        const todayTotal = todayResponses.length;
+        const todayAcertos = todayResponses.filter((r: any) => r.acertou).length;
+        const atualPct = todayTotal > 0 ? Math.round((todayAcertos / todayTotal) * 100) : 0;
 
         const weekly = [
           { label: 'Sem 1', pct: sem1Pct },
           { label: 'Sem 2', pct: sem2Pct },
           { label: 'Sem 3', pct: sem3Pct },
           { label: 'Sem 4', pct: sem4Pct },
-          { label: 'Atual', pct: atualPct },
+          { label: 'Hoje', pct: atualPct },
         ];
 
         setPerformanceHistory({ daily, weekly });
