@@ -8,6 +8,7 @@
 - A autenticação de usuários utiliza o `auth.users` nativo do Supabase com tela dedicada de login e cadastro.
 - **Persistência de Rodadas e Desafios**: Ao resolver questões, o app persiste cada resposta individual na tabela `respostas_usuario`. Ao concluir uma rodada de **Desafio** ou **Simulado**, o sistema registra automaticamente a tentativa e os metadados correspondentes nas tabelas `desafios` e `tentativas_desafio` (para desafios) ou `simulados` e `tentativas_simulado` (para simulados).
 - Em ambiente offline ou fallback, utiliza-se cache local para resiliência.
+- **Métricas Derivadas e Estatísticas (Índice Geral, Projeção, Ofensivas e Gráficos)**: **Não precisam ser armazenadas separadamente em tabelas estáticas no banco de dados.** Elas são calculadas dinamicamente em tempo real no carregamento da aplicação (ou sempre que o histórico de respostas é sincronizado) a partir dos eventos brutos e imutáveis da tabela `respostas_usuario`. Isso garante a integridade como *Single Source of Truth*, evita redundância e elimina o risco de dessincronização (*sync drift*).
 
 ## Configurações e Metas Pessoais (`localStorage`)
 As preferências de metas pessoais e matérias-alvo do usuário são armazenadas localmente no navegador (`localStorage`) utilizando as seguintes chaves:
@@ -17,6 +18,8 @@ As preferências de metas pessoais e matérias-alvo do usuário são armazenadas
 - `acertocerto_meta_aproveitamento`: Percentual mínimo de aproveitamento geral desejado.
 - `acertocerto_meta_aprov_materia`: Percentual mínimo de aproveitamento por matéria.
 - `acertocerto_materias_alvo`: Lista em JSON das disciplinas-alvo selecionadas pelo usuário.
+- `acertocerto_assuntos_alvo`: Lista em JSON dos assuntos-alvo selecionados pelo usuário.
+- `acertocerto_anos_alvo`: Lista em JSON dos anos-alvo selecionados pelo usuário.
 
 ## Tabelas no Schema `acertocerto`
 1. `acertocerto.questoes`: Armazena o banco de questões estruturado conforme o JSON Schema oficial.

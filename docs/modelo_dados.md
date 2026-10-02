@@ -79,3 +79,16 @@ Histórico de conclusão de desafios pelos usuários:
 - `tempo_gasto_segundos` (INTEGER)
 - `concluido` (BOOLEAN)
 - `created_at` (TIMESTAMP)
+
+### 8. Tabela `acertocerto.configuracoes_usuario`
+Configurações, metas e alvos de estudo do usuário:
+- `user_id` (UUID, PK)
+- `meta_questoes` (INTEGER)
+- `meta_desafios` (INTEGER)
+- `meta_simulados` (INTEGER)
+- `meta_aproveitamento` (NUMERIC)
+- `meta_aprov_materia` (NUMERIC)
+- `materias_alvo` (JSONB) - Array de strings com as disciplinas focadas
+- `assuntos_alvo` (JSONB) - Array de strings com os assuntos focados
+- `anos_alvo` (JSONB) - Array de strings com os anos-alvo focados
+- `updated_at` (TIMESTAMP)

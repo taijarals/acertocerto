@@ -106,6 +106,8 @@ CREATE TABLE IF NOT EXISTS acertocerto.configuracoes_usuario (
     meta_aproveitamento NUMERIC DEFAULT 70,
     meta_aprov_materia NUMERIC DEFAULT 65,
     materias_alvo JSONB,
+    assuntos_alvo JSONB,
+    anos_alvo JSONB,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
