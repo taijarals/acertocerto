@@ -1,20 +1,20 @@
 -- =====================================================================
--- AcertoCerto - Script SQL de Configuração do Supabase (Schema: aprovado)
--- Conforme Regra 6: todos os dados do app vivem no schema "aprovado".
+-- AcertoCerto - Script SQL de Configuração do Supabase (Schema: acertocerto)
+-- Conforme Regra 6: todos os dados do app vivem no schema "acertocerto".
 -- Cole este script no SQL Editor do seu projeto Supabase para criar
 -- a estrutura completa de banco de dados.
 -- =====================================================================
 
 -- 1. Criar o schema dedicado
-CREATE SCHEMA IF NOT EXISTS aprovado;
+CREATE SCHEMA IF NOT EXISTS acertocerto;
 
 -- 2. Conceder permissões para os papéis padrão do Supabase no schema
-GRANT USAGE ON SCHEMA aprovado TO anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA aprovado TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA aprovado GRANT ALL ON TABLES TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA acertocerto TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA acertocerto TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA acertocerto GRANT ALL ON TABLES TO anon, authenticated, service_role;
 
 -- 3. Tabela de Questões
-CREATE TABLE IF NOT EXISTS aprovado.questoes (
+CREATE TABLE IF NOT EXISTS acertocerto.questoes (
     id VARCHAR PRIMARY KEY,
     disciplina VARCHAR,
     assunto VARCHAR NOT NULL,
@@ -34,25 +34,25 @@ CREATE TABLE IF NOT EXISTS aprovado.questoes (
 );
 
 -- 4. Tabela de Respostas dos Usuários
-CREATE TABLE IF NOT EXISTS aprovado.respostas_usuario (
+CREATE TABLE IF NOT EXISTS acertocerto.respostas_usuario (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID,
-    questao_id VARCHAR REFERENCES aprovado.questoes(id) ON DELETE CASCADE,
+    questao_id VARCHAR REFERENCES acertocerto.questoes(id) ON DELETE CASCADE,
     resposta_usuario VARCHAR(1),
     acertou BOOLEAN,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- 5. Tabela de Favoritos
-CREATE TABLE IF NOT EXISTS aprovado.favoritos (
+CREATE TABLE IF NOT EXISTS acertocerto.favoritos (
     user_id UUID,
-    questao_id VARCHAR REFERENCES aprovado.questoes(id) ON DELETE CASCADE,
+    questao_id VARCHAR REFERENCES acertocerto.questoes(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     PRIMARY KEY (user_id, questao_id)
 );
 
 -- 6. Tabela de Controle de Simulados
-CREATE TABLE IF NOT EXISTS aprovado.simulados (
+CREATE TABLE IF NOT EXISTS acertocerto.simulados (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     titulo VARCHAR NOT NULL,
     descricao TEXT,
@@ -63,10 +63,10 @@ CREATE TABLE IF NOT EXISTS aprovado.simulados (
 );
 
 -- 7. Tabela de Tentativas de Simulados
-CREATE TABLE IF NOT EXISTS aprovado.tentativas_simulado (
+CREATE TABLE IF NOT EXISTS acertocerto.tentativas_simulado (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID,
-    simulado_id UUID REFERENCES aprovado.simulados(id) ON DELETE CASCADE,
+    simulado_id UUID REFERENCES acertocerto.simulados(id) ON DELETE CASCADE,
     status VARCHAR DEFAULT 'concluido',
     acertos INTEGER DEFAULT 0,
     total_questoes INTEGER DEFAULT 0,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS aprovado.tentativas_simulado (
 );
 
 -- 8. Tabela de Controle de Desafios
-CREATE TABLE IF NOT EXISTS aprovado.desafios (
+CREATE TABLE IF NOT EXISTS acertocerto.desafios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     titulo VARCHAR NOT NULL,
     descricao TEXT,
@@ -87,10 +87,10 @@ CREATE TABLE IF NOT EXISTS aprovado.desafios (
 );
 
 -- 9. Tabela de Tentativas de Desafios
-CREATE TABLE IF NOT EXISTS aprovado.tentativas_desafio (
+CREATE TABLE IF NOT EXISTS acertocerto.tentativas_desafio (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID,
-    desafio_id UUID REFERENCES aprovado.desafios(id) ON DELETE CASCADE,
+    desafio_id UUID REFERENCES acertocerto.desafios(id) ON DELETE CASCADE,
     acertos INTEGER DEFAULT 0,
     total_questoes INTEGER DEFAULT 0,
     tempo_gasto_segundos INTEGER DEFAULT 0,
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS aprovado.tentativas_desafio (
 );
 
 -- 10. Tabela de Configurações e Metas do Usuário
-CREATE TABLE IF NOT EXISTS aprovado.configuracoes_usuario (
+CREATE TABLE IF NOT EXISTS acertocerto.configuracoes_usuario (
     user_id UUID PRIMARY KEY,
     meta_questoes INTEGER DEFAULT 20,
     meta_desafios INTEGER DEFAULT 2,
@@ -113,22 +113,22 @@ CREATE TABLE IF NOT EXISTS aprovado.configuracoes_usuario (
 );
 
 -- 11. Habilitar RLS (Row Level Security) nas tabelas
-ALTER TABLE aprovado.questoes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE aprovado.respostas_usuario ENABLE ROW LEVEL SECURITY;
-ALTER TABLE aprovado.favoritos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE aprovado.simulados ENABLE ROW LEVEL SECURITY;
-ALTER TABLE aprovado.tentativas_simulado ENABLE ROW LEVEL SECURITY;
-ALTER TABLE aprovado.desafios ENABLE ROW LEVEL SECURITY;
-ALTER TABLE aprovado.tentativas_desafio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE aprovado.configuracoes_usuario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.questoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.respostas_usuario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.favoritos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.simulados ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.tentativas_simulado ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.desafios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.tentativas_desafio ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.configuracoes_usuario ENABLE ROW LEVEL SECURITY;
 
 -- 12. Políticas de Acesso
-CREATE POLICY "Permitir leitura de questões para todos" ON aprovado.questoes FOR SELECT USING (true);
-CREATE POLICY "Permitir inserção de questões" ON aprovado.questoes FOR INSERT WITH CHECK (true);
-CREATE POLICY "Permitir gestão de respostas do próprio usuário" ON aprovado.respostas_usuario FOR ALL USING (true);
-CREATE POLICY "Permitir gestão de favoritos do próprio usuário" ON aprovado.favoritos FOR ALL USING (true);
-CREATE POLICY "Permitir gestão de simulados" ON aprovado.simulados FOR ALL USING (true);
-CREATE POLICY "Permitir gestão de tentativas de simulado" ON aprovado.tentativas_simulado FOR ALL USING (true);
-CREATE POLICY "Permitir gestão de desafios" ON aprovado.desafios FOR ALL USING (true);
-CREATE POLICY "Permitir gestão de tentativas de desafio" ON aprovado.tentativas_desafio FOR ALL USING (true);
-CREATE POLICY "Permitir gestão de configurações do usuário" ON aprovado.configuracoes_usuario FOR ALL USING (true);
+CREATE POLICY "Permitir leitura de questões para todos" ON acertocerto.questoes FOR SELECT USING (true);
+CREATE POLICY "Permitir inserção de questões" ON acertocerto.questoes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Permitir gestão de respostas do próprio usuário" ON acertocerto.respostas_usuario FOR ALL USING (true);
+CREATE POLICY "Permitir gestão de favoritos do próprio usuário" ON acertocerto.favoritos FOR ALL USING (true);
+CREATE POLICY "Permitir gestão de simulados" ON acertocerto.simulados FOR ALL USING (true);
+CREATE POLICY "Permitir gestão de tentativas de simulado" ON acertocerto.tentativas_simulado FOR ALL USING (true);
+CREATE POLICY "Permitir gestão de desafios" ON acertocerto.desafios FOR ALL USING (true);
+CREATE POLICY "Permitir gestão de tentativas de desafio" ON acertocerto.tentativas_desafio FOR ALL USING (true);
+CREATE POLICY "Permitir gestão de configurações do usuário" ON acertocerto.configuracoes_usuario FOR ALL USING (true);

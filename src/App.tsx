@@ -4171,7 +4171,7 @@ export default function App() {
             <div className="flex items-center justify-between">
               <h3 className="font-title-md font-bold text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">terminal</span>
-                <span>Configuração Necessária no Supabase (Schema: aprovado)</span>
+                <span>Configuração Necessária no Supabase (Schema: acertocerto)</span>
               </h3>
               <button className="p-1 rounded-lg hover:bg-surface-container" onClick={() => setSupabaseSqlModalOpen(false)}>
                 <span className="material-symbols-outlined">close</span>
@@ -4179,15 +4179,15 @@ export default function App() {
             </div>
 
             <p className="text-body-sm text-on-surface-variant">
-              O erro ocorreu porque a tabela <code className="bg-surface-container px-1 py-0.5 rounded text-xs font-code-md text-primary">aprovado.questoes</code> ainda não foi criada no seu projeto Supabase. Abra o seu <strong className="text-on-surface">Supabase Dashboard &gt; SQL Editor</strong>, cole e execute o comando SQL abaixo:
+              O erro ocorreu porque a tabela <code className="bg-surface-container px-1 py-0.5 rounded text-xs font-code-md text-primary">acertocerto.questoes</code> ainda não foi criada no seu projeto Supabase. Abra o seu <strong className="text-on-surface">Supabase Dashboard &gt; SQL Editor</strong>, cole e execute o comando SQL abaixo:
             </p>
 
             <div className="relative">
-              <pre className="bg-surface-container-high p-4 rounded-xl text-xs font-code-md text-on-surface overflow-x-auto max-h-60">{`-- 1. Criar o schema aprovado
-CREATE SCHEMA IF NOT EXISTS aprovado;
+              <pre className="bg-surface-container-high p-4 rounded-xl text-xs font-code-md text-on-surface overflow-x-auto max-h-60">{`-- 1. Criar o schema acertocerto
+CREATE SCHEMA IF NOT EXISTS acertocerto;
 
 -- 2. Criar a tabela de questões
-CREATE TABLE IF NOT EXISTS aprovado.questoes (
+CREATE TABLE IF NOT EXISTS acertocerto.questoes (
   id TEXT PRIMARY KEY,
   disciplina TEXT NOT NULL,
   assunto TEXT,
@@ -4207,19 +4207,19 @@ CREATE TABLE IF NOT EXISTS aprovado.questoes (
 );
 
 -- 3. Habilitar segurança e permitir acesso total (insersões, leituras, etc.)
-ALTER TABLE aprovado.questoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.questoes ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Permitir acesso total em questoes aprovado" ON aprovado.questoes;
-CREATE POLICY "Permitir acesso total em questoes aprovado" ON aprovado.questoes
+DROP POLICY IF EXISTS "Permitir acesso total em questoes acertocerto" ON acertocerto.questoes;
+CREATE POLICY "Permitir acesso total em questoes acertocerto" ON acertocerto.questoes
   FOR ALL USING (true) WITH CHECK (true);`}</pre>
             </div>
 
             <div className="flex justify-between items-center pt-2">
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`CREATE SCHEMA IF NOT EXISTS aprovado;
+                  navigator.clipboard.writeText(`CREATE SCHEMA IF NOT EXISTS acertocerto;
 
-CREATE TABLE IF NOT EXISTS aprovado.questoes (
+CREATE TABLE IF NOT EXISTS acertocerto.questoes (
   id TEXT PRIMARY KEY,
   disciplina TEXT NOT NULL,
   assunto TEXT,
@@ -4238,10 +4238,10 @@ CREATE TABLE IF NOT EXISTS aprovado.questoes (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-ALTER TABLE aprovado.questoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.questoes ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Permitir acesso total em questoes aprovado" ON aprovado.questoes;
-CREATE POLICY "Permitir acesso total em questoes aprovado" ON aprovado.questoes
+DROP POLICY IF EXISTS "Permitir acesso total em questoes acertocerto" ON acertocerto.questoes;
+CREATE POLICY "Permitir acesso total em questoes acertocerto" ON acertocerto.questoes
   FOR ALL USING (true) WITH CHECK (true);`);
                   showNotification("Script SQL copiado para a área de transferência!");
                 }}

@@ -1,8 +1,8 @@
-# Modelo de Dados - AcertoCerto (Schema: aprovado)
+# Modelo de Dados - AcertoCerto (Schema: acertocerto)
 
-## Tabelas PostgreSQL (Schema: `aprovado`)
+## Tabelas PostgreSQL (Schema: `acertocerto`)
 
-### 1. Tabela `aprovado.questoes`
+### 1. Tabela `acertocerto.questoes`
 Reflete rigorosamente o schema JSON oficial de lote de questões do AcertoCerto:
 - `id` (VARCHAR, PK)
 - `disciplina` (VARCHAR, NULLABLE)
@@ -21,23 +21,23 @@ Reflete rigorosamente o schema JSON oficial de lote de questões do AcertoCerto:
 - `explicacao` (JSONB, NULLABLE) - Contém status, resumo e alternativas com justificativa detalhada por letra.
 - `created_at` (TIMESTAMP)
 
-### 2. Tabela `aprovado.respostas_usuario`
+### 2. Tabela `acertocerto.respostas_usuario`
 Registra cada resposta dada pelo usuário em qualquer questão respondida no app (essencial para o painel de Desempenho e relatórios estatísticos):
 - `id` (UUID, PK)
 - `user_id` (UUID, FK reference auth.users)
-- `questao_id` (VARCHAR, FK reference aprovado.questoes)
+- `questao_id` (VARCHAR, FK reference acertocerto.questoes)
 - `resposta_usuario` (VARCHAR)
 - `acertou` (BOOLEAN)
 - `created_at` (TIMESTAMP)
 
-### 3. Tabela `aprovado.favoritos`
+### 3. Tabela `acertocerto.favoritos`
 Caderno de questões favoritas por usuário:
 - `user_id` (UUID, FK reference auth.users)
-- `questao_id` (VARCHAR, FK reference aprovado.questoes)
+- `questao_id` (VARCHAR, FK reference acertocerto.questoes)
 - `created_at` (TIMESTAMP)
 - PK (`user_id`, `questao_id`)
 
-### 4. Tabela `aprovado.simulados`
+### 4. Tabela `acertocerto.simulados`
 Tabela de controle para simulados estruturados (provas simuladas configuradas):
 - `id` (UUID, PK)
 - `titulo` (VARCHAR)
@@ -47,11 +47,11 @@ Tabela de controle para simulados estruturados (provas simuladas configuradas):
 - `configuracao` (JSONB, NULLABLE)
 - `created_at` (TIMESTAMP)
 
-### 5. Tabela `aprovado.tentativas_simulado`
+### 5. Tabela `acertocerto.tentativas_simulado`
 Histórico de execuções de simulados por usuário:
 - `id` (UUID, PK)
 - `user_id` (UUID)
-- `simulado_id` (UUID, FK reference aprovado.simulados)
+- `simulado_id` (UUID, FK reference acertocerto.simulados)
 - `status` (VARCHAR) - 'em_andamento', 'concluido', 'abandonado'
 - `acertos` (INTEGER)
 - `total_questoes` (INTEGER)
@@ -60,7 +60,7 @@ Histórico de execuções de simulados por usuário:
 - `started_at` (TIMESTAMP)
 - `finished_at` (TIMESTAMP)
 
-### 6. Tabela `aprovado.desafios`
+### 6. Tabela `acertocerto.desafios`
 Tabela de controle para desafios diários e relâmpagos:
 - `id` (UUID, PK)
 - `titulo` (VARCHAR)
@@ -69,18 +69,18 @@ Tabela de controle para desafios diários e relâmpagos:
 - `questoes_ids` (JSONB)
 - `created_at` (TIMESTAMP)
 
-### 7. Tabela `aprovado.tentativas_desafio`
+### 7. Tabela `acertocerto.tentativas_desafio`
 Histórico de conclusão de desafios pelos usuários:
 - `id` (UUID, PK)
 - `user_id` (UUID)
-- `desafio_id` (UUID, FK reference aprovado.desafios)
+- `desafio_id` (UUID, FK reference acertocerto.desafios)
 - `acertos` (INTEGER)
 - `total_questoes` (INTEGER)
 - `tempo_gasto_segundos` (INTEGER)
 - `concluido` (BOOLEAN)
 - `created_at` (TIMESTAMP)
 
-### 8. Tabela `aprovado.configuracoes_usuario`
+### 8. Tabela `acertocerto.configuracoes_usuario`
 Configurações, metas e alvos de estudo do usuário:
 - `user_id` (UUID, PK)
 - `meta_questoes` (INTEGER)
