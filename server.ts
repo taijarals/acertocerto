@@ -15,6 +15,117 @@ if (!fs.existsSync(path.dirname(DATA_FILE))) {
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
 }
 
+const DEFAULT_QUESTIONS = [
+  {
+    id: "q_demo_01",
+    disciplina: "Direito Administrativo",
+    assunto: "Atos Administrativos",
+    ano: "2026",
+    banca: "CESGRANRIO",
+    prova: "Banco do Brasil - Executivo",
+    enunciado: "No que diz respeito aos atos administrativos, assinale a alternativa correta sobre os requisitos de validade.",
+    tipo: "multipla_escolha",
+    alternativas: [
+      "A competência é requisito sempre negociável mediante acordo entre administrações.",
+      "O motivo é a situação de fato ou de direito que autoriza ou exige a prática do ato administrativo.",
+      "A finalidade pode ser alterada pelo agente público conforme conveniência momentânea.",
+      "A forma é sempre livre, salvo expressa exigência em contrário da lei."
+    ],
+    alternativa_certa: "O motivo é a situação de fato ou de direito que autoriza ou exige a prática do ato administrativo.",
+    comentario: "O motivo é pressuposto de fato e de direito que serve de base para a prática do ato administrativo. A competência e a finalidade são vinculadas e indisponíveis.",
+    source: "official"
+  },
+  {
+    id: "q_demo_02",
+    disciplina: "Direito Constitucional",
+    assunto: "Direitos e Garantias Fundamentais",
+    ano: "2026",
+    banca: "CEBRASPE",
+    prova: "Analista Judiciário - TST",
+    enunciado: "Conforme a Constituição Federal de 1988, assinale a opção correta acerca dos direitos e garantias fundamentais.",
+    tipo: "multipla_escolha",
+    alternativas: [
+      "É livre a expressão da atividade intelectual, artística, científica e de comunicação, independentemente de censura ou licença.",
+      "As associações de caráter paramilitar são permitidas desde que autorizadas pelo Ministério da Justiça.",
+      "A prisão de qualquer pessoa e o local onde se encontre serão comunicados imediatamente ao juiz competente e à família do preso ou à pessoa por ele indicada.",
+      "A casa é asilo inviolável do indivíduo, ninguém nela podendo penetrar sem consentimento do morador, em nenhuma hipótese."
+    ],
+    alternativa_certa: "É livre a expressão da atividade intelectual, artística, científica e de comunicação, independentemente de censura ou licença.",
+    comentario: "A CF/88 estabelece a liberdade de expressão sem censura prévia (Art. 5º, IX). A inviolabilidade de domicílio possui exceções como flagrante delito ou desastre.",
+    source: "official"
+  },
+  {
+    id: "q_demo_03",
+    disciplina: "Língua Portuguesa",
+    assunto: "Crase e Regência",
+    ano: "2026",
+    banca: "FGV",
+    prova: "Auditor Fiscal - Receita Federal",
+    enunciado: "Assinale a alternativa em que o uso do acento indicativo de crase está em estrita conformidade com a norma-padrão.",
+    tipo: "multipla_escolha",
+    alternativas: [
+      "O candidato visou à vaga de analista com muita dedicação.",
+      "Entregou o relatório à Vossa Senhoria no prazo estabelecido.",
+      "Fomos à Salvador nas férias de janeiro.",
+      "Daqui à dois dias divulgaremos o resultado."
+    ],
+    alternativa_certa: "O candidato visou à vaga de analista com muita dedicação.",
+    comentario: "O verbo visar no sentido de aspirar, desejar é transitivo indireto (rege a preposição 'a'), que combinada com o artigo feminino 'a' da palavra 'vaga' resulta em 'à'.",
+    source: "official"
+  },
+  {
+    id: "q_demo_04",
+    disciplina: "Informática",
+    assunto: "Segurança da Informação",
+    ano: "2026",
+    banca: "FCC",
+    prova: "Tribunal de Contas - Auditor",
+    enunciado: "Assinale a alternativa que define corretamente o conceito de Ransomware no contexto de segurança da informação.",
+    tipo: "multipla_escolha",
+    alternativas: [
+      "Software malicioso que criptografa os dados da vítima e exige pagamento de resgate para liberação.",
+      "Programa legítimo utilizado para monitorar o tráfego de rede corporativa.",
+      "Dispositivo de hardware que bloqueia tentativas de acesso físico não autorizado.",
+      "Técnica de engenharia social voltada exclusivamente para interceptação de chamadas telefônicas."
+    ],
+    alternativa_certa: "Software malicioso que criptografa os dados da vítima e exige pagamento de resgate para liberação.",
+    comentario: "Ransomware (ransom = resgate) é um tipo de malware que sequestra dados por meio de criptografia forte, exigindo resgate financeiro.",
+    source: "official"
+  },
+  {
+    id: "q_demo_05",
+    disciplina: "Raciocínio Lógico",
+    assunto: "Lógica Proposicional",
+    ano: "2026",
+    banca: "FGV",
+    prova: "Banco Central - Analista",
+    enunciado: "Dada a proposição composta 'Se estudo lógica, entendo direito', sua equivalência lógica correta é:",
+    tipo: "multipla_escolha",
+    alternativas: [
+      "Se não entendo direito, não estudo lógica.",
+      "Não estudo lógica ou não entendo direito.",
+      "Se entendo direito, estudo lógica.",
+      "Estudo lógica e não entendo direito."
+    ],
+    alternativa_certa: "Se não entendo direito, não estudo lógica.",
+    comentario: "A equivalência da implicação (P -> Q) é dada pela contrapositiva (~Q -> ~P): nega-se a volta e inverte-se a ordem.",
+    source: "official"
+  }
+];
+
+if (!fs.existsSync(DATA_FILE)) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(DEFAULT_QUESTIONS, null, 2), 'utf-8');
+} else {
+  try {
+    const existing = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    if (!Array.isArray(existing) || existing.length === 0) {
+      fs.writeFileSync(DATA_FILE, JSON.stringify(DEFAULT_QUESTIONS, null, 2), 'utf-8');
+    }
+  } catch (e) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(DEFAULT_QUESTIONS, null, 2), 'utf-8');
+  }
+}
+
 async function startServer() {
   const app = express();
   app.use(express.json({ limit: '10mb' }));

@@ -1,8 +1,8 @@
 # Persistência de Dados - AcertoCerto
 
 ## Estratégia de Armazenamento e Supabase
-- O aplicativo conecta-se ao banco de dados **Supabase** utilizando o schema dedicado **`acertocerto`** (conforme Regra 6), garantindo que todos os dados relacionais de questões, respostas, simulados, desafios e favoritos fiquem isolados do schema `public`.
-- As consultas de carregamento de questões recuperam registros no schema `acertocerto`.
+- O aplicativo conecta-se ao banco de dados **Supabase** utilizando o schema dedicado **`acertocerto`** (conforme Regra 6), garantindo que todos os dados relacionais de questões, respostas, simulados, desafios e favoritos fiquem isolados.
+- As consultas de carregamento de questões recuperam registros em blocos paginados no schema `acertocerto` para garantir precisão absoluta nos indicadores globais de acervo, disciplinas e questões validadas.
 - A importação de JSON valida e persiste os lotes de questões refletindo integralmente o schema JSON oficial do AcertoCerto.
 - O script DDL completo para criação do schema e das tabelas está disponível em `/docs/supabase_setup.sql`.
 - A autenticação de usuários utiliza o `auth.users` nativo do Supabase com tela dedicada de login e cadastro.

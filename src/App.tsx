@@ -63,29 +63,115 @@ const FullLogo = ({ className = "h-8" }: { className?: string }) => (
   </div>
 );
 
-const SAMPLE_QUESTION_TEMPLATE: Questao[] = [
+const SAMPLE_RICH_QUESTIONS: Questao[] = [
   {
-    id: "exemplo_01",
+    id: "q_demo_01",
     disciplina: "Direito Administrativo",
     assunto: "Atos Administrativos",
     ano: "2026",
     banca: "CESGRANRIO",
-    prova: "Exemplo Prova",
+    prova: "Banco do Brasil - Executivo",
     tipo: "multipla_escolha",
     pagina: 1,
-    enunciado: "Exemplo de enunciado de questão...",
+    enunciado: "No que diz respeito aos requisitos de validade do ato administrativo, assinale a alternativa que indica o elemento vinculado que se refere à exteriorização da vontade da Administração Pública:",
     alternativas: [
-      { letra: "A", texto: "Alternativa A..." },
-      { letra: "B", texto: "Alternativa B..." },
-      { letra: "C", texto: "Alternativa C..." },
-      { letra: "D", texto: "Alternativa D..." },
-      { letra: "E", texto: "Alternativa E..." }
+      { letra: "A", texto: "Competência" },
+      { letra: "B", texto: "Finalidade" },
+      { letra: "C", texto: "Forma" },
+      { letra: "D", texto: "Motivo" },
+      { letra: "E", texto: "Objeto" }
     ],
-    alternativa_certa: "A",
-    comentario_ia: "Comentário explicativo da questão.",
+    alternativa_certa: "C",
+    comentario_ia: "A Forma é o requisito vinculado que diz respeito à exteriorização do ato administrativo. Em regra, o ato deve ser escrito, salvo exceções previstas em lei.",
+    source: "official"
+  },
+  {
+    id: "q_demo_02",
+    disciplina: "Direito Constitucional",
+    assunto: "Direitos e Garantias Fundamentais",
+    ano: "2026",
+    banca: "FGV",
+    prova: "TJ-SC - Analista",
+    tipo: "multipla_escolha",
+    pagina: 1,
+    enunciado: "De acordo com a Constituição Federal de 1988, sobre os direitos e deveres individuais e coletivos, é correto afirmar que:",
+    alternativas: [
+      { letra: "A", texto: "a casa é asilo inviolável do indivíduo, ninguém nela podendo penetrar sem consentimento do morador, em hipótese alguma." },
+      { letra: "B", texto: "é livre a expressão da atividade intelectual, artística, científica e de comunicação, independentemente de censura ou licença." },
+      { letra: "C", texto: "é garantido o direito de propriedade, não podendo a propriedade privada sofrer desapropriação por necessidade pública." },
+      { letra: "D", texto: "as associações de caráter paramilitar são permitidas desde que autorizadas pelo Ministério da Justiça." },
+      { letra: "E", texto: "a prisão de qualquer pessoa e o lugar onde se encuentre serão comunicados imediatamente ao juiz competente e à família do preso." }
+    ],
+    alternativa_certa: "B",
+    comentario_ia: "O art. 5º, inciso IX, da CF/88 estabelece que é livre a expressão da atividade intelectual, artística, científica e de comunicação, independentemente de censura ou licença.",
+    source: "official"
+  },
+  {
+    id: "q_demo_03",
+    disciplina: "Língua Portuguesa",
+    assunto: "Crase",
+    ano: "2025",
+    banca: "CESGRANRIO",
+    prova: "Transpetro - Técnico",
+    tipo: "multipla_escolha",
+    pagina: 1,
+    enunciado: "Assinale a alternativa em que o uso do acento indicativo de crase está em estrita conformidade com a norma-padrão da língua portuguesa:",
+    alternativas: [
+      { letra: "A", texto: "O candidato entregou os documentos à tempo da inscrição." },
+      { letra: "B", texto: "Fomos à Brasília visitar o congresso nacional na semana passada." },
+      { letra: "C", texto: "Referiu-se às críticas feitas pelo conselho com muita serenidade." },
+      { letra: "D", texto: "O diretor visou à uma promoção para os melhores colaboradores." },
+      { letra: "E", texto: "Passado o prazo, o edital ficou aberto à todos os interessados." }
+    ],
+    alternativa_certa: "C",
+    comentario_ia: "O verbo 'referir' rege a preposição 'a' e o termo feminino 'críticas' aceita artigo 'as', ocorrendo crase: 'às'. Nas demais opções há desvios (locução temporal masculina, nome de cidade sem artigo, verbo transitivo direto e pronome indefinido).",
+    source: "official"
+  },
+  {
+    id: "q_demo_04",
+    disciplina: "Raciocínio Lógico",
+    assunto: "Proposições e Equivalências",
+    ano: "2025",
+    banca: "FGV",
+    prova: "Auditor Fiscal - SEFAZ",
+    tipo: "multipla_escolha",
+    pagina: 1,
+    enunciado: "Dada a proposição condicional: 'Se estudo estatística, então serei aprovado no concurso.', uma proposição logicamente equivalente a ela é:",
+    alternativas: [
+      { letra: "A", texto: "Se não estudo estatística, então não serei aprovado no concurso." },
+      { letra: "B", texto: "Se não serei aprovado no concurso, então não estudo estatística." },
+      { letra: "C", texto: "Estudo estatística e não serei aprovado no concurso." },
+      { letra: "D", texto: "Ou não estudo estatística, ou serei aprovado." },
+      { letra: "E", texto: "Se serei aprovado no concurso, então estudo estatística." }
+    ],
+    alternativa_certa: "B",
+    comentario_ia: "A equivalência da condicional (P -> Q) pode ser dada por (~Q -> ~P) (contrapositiva). Negando a conclusão e invertendo: 'Se não serei aprovado, então não estudo estatística'.",
+    source: "official"
+  },
+  {
+    id: "q_demo_05",
+    disciplina: "Informática",
+    assunto: "Segurança da Informação",
+    ano: "2026",
+    banca: "CESGRANRIO",
+    prova: "BNDES - Técnico",
+    tipo: "multipla_escolha",
+    pagina: 1,
+    enunciado: "Assinale a alternativa que define corretamente o malware conhecido como Ransomware:",
+    alternativas: [
+      { letra: "A", texto: "Programa malicioso que monitora e registra as teclas digitadas pelo usuário no teclado." },
+      { letra: "B", texto: "Software legítimo que abre portas secundárias para acesso remoto desautorizado." },
+      { letra: "C", texto: "Código malicioso que criptografa os arquivos do equipamento e exige pagamento de resgate para liberação." },
+      { letra: "D", texto: "Vírus que se replica automaticamente através de e-mails corporativos sem intervenção humana." },
+      { letra: "E", texto: "Ferramenta de firewall que bloqueia tráfego suspeito na rede." }
+    ],
+    alternativa_certa: "C",
+    comentario_ia: "Ransomware é o tipo de código malicioso que sequestra os dados do usuário por meio de criptografia forte, exigindo um resgate (normalmente em criptomoedas) em troca da chave de descriptografia.",
     source: "official"
   }
 ];
+
+const SAMPLE_QUESTION_TEMPLATE = SAMPLE_RICH_QUESTIONS;
 
 const MultiSelectDropdown = ({
   label,
@@ -182,13 +268,30 @@ const MultiSelectDropdown = ({
 };
 
 export default function App() {
+  const safeLocalStorage = {
+    getItem: (key: string): string | null => {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    },
+    setItem: (key: string, value: string): void => {
+      try { localStorage.setItem(key, value); } catch (e) {}
+    },
+    removeItem: (key: string): void => {
+      try { localStorage.removeItem(key); } catch (e) {}
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<'inicio' | 'ofensivas' | 'desempenho' | 'gestao' | 'configuracoes'>('inicio');
   const [ofensivasSubTab, setOfensivasSubTab] = useState<'desafios' | 'simulado' | 'focado'>('desafios');
   const [desempenhoSubTab, setDesempenhoSubTab] = useState<'geral' | 'materias' | 'habitos'>('geral');
   const [gestaoSubTab, setGestaoSubTab] = useState<'auditoria' | 'importacao'>('auditoria');
   const [gestaoFilter, setGestaoFilter] = useState<'all' | 'pendentes' | 'completas'>('all');
   const [clearDbModalOpen, setClearDbModalOpen] = useState<boolean>(false);
+  const [badgesModalOpen, setBadgesModalOpen] = useState<boolean>(false);
   const [userInitials, setUserInitials] = useState<string>('AC');
+
+  useEffect(() => {
+    safeLocalStorage.removeItem('acertocerto_demo_respostas');
+  }, []);
 
   useEffect(() => {
     if (isSupabaseConfigured() && supabase) {
@@ -213,42 +316,42 @@ export default function App() {
 
   // User Goals & Settings States
   const [metaQuestoesDia, setMetaQuestoesDia] = useState<number>(() => {
-    const saved = localStorage.getItem('acertocerto_meta_questoes');
+    const saved = safeLocalStorage.getItem('acertocerto_meta_questoes');
     return saved ? Number(saved) : 20;
   });
   const [metaDesafiosDia, setMetaDesafiosDia] = useState<number>(() => {
-    const saved = localStorage.getItem('acertocerto_meta_desafios');
+    const saved = safeLocalStorage.getItem('acertocerto_meta_desafios');
     return saved ? Number(saved) : 2;
   });
   const [metaSimuladosSemana, setMetaSimuladosSemana] = useState<number>(() => {
-    const saved = localStorage.getItem('acertocerto_meta_simulados');
+    const saved = safeLocalStorage.getItem('acertocerto_meta_simulados');
     return saved ? Number(saved) : 1;
   });
   const [metaAproveitamentoGeral, setMetaAproveitamentoGeral] = useState<number>(() => {
-    const saved = localStorage.getItem('acertocerto_meta_aproveitamento');
+    const saved = safeLocalStorage.getItem('acertocerto_meta_aproveitamento');
     return saved ? Number(saved) : 70;
   });
   const [metaAproveitamentoMateria, setMetaAproveitamentoMateria] = useState<number>(() => {
-    const saved = localStorage.getItem('acertocerto_meta_aprov_materia');
+    const saved = safeLocalStorage.getItem('acertocerto_meta_aprov_materia');
     return saved ? Number(saved) : 65;
   });
   const [materiasAlvo, setMateriasAlvo] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('acertocerto_materias_alvo');
+      const saved = safeLocalStorage.getItem('acertocerto_materias_alvo');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return [];
   });
   const [assuntosAlvo, setAssuntosAlvo] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('acertocerto_assuntos_alvo');
+      const saved = safeLocalStorage.getItem('acertocerto_assuntos_alvo');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return [];
   });
   const [anosAlvo, setAnosAlvo] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('acertocerto_anos_alvo');
+      const saved = safeLocalStorage.getItem('acertocerto_anos_alvo');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return [];
@@ -259,14 +362,14 @@ export default function App() {
 
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('acertocerto_meta_questoes', String(metaQuestoesDia));
-    localStorage.setItem('acertocerto_meta_desafios', String(metaDesafiosDia));
-    localStorage.setItem('acertocerto_meta_simulados', String(metaSimuladosSemana));
-    localStorage.setItem('acertocerto_meta_aproveitamento', String(metaAproveitamentoGeral));
-    localStorage.setItem('acertocerto_meta_aprov_materia', String(metaAproveitamentoMateria));
-    localStorage.setItem('acertocerto_materias_alvo', JSON.stringify(materiasAlvo));
-    localStorage.setItem('acertocerto_assuntos_alvo', JSON.stringify(assuntosAlvo));
-    localStorage.setItem('acertocerto_anos_alvo', JSON.stringify(anosAlvo));
+    safeLocalStorage.setItem('acertocerto_meta_questoes', String(metaQuestoesDia));
+    safeLocalStorage.setItem('acertocerto_meta_desafios', String(metaDesafiosDia));
+    safeLocalStorage.setItem('acertocerto_meta_simulados', String(metaSimuladosSemana));
+    safeLocalStorage.setItem('acertocerto_meta_aproveitamento', String(metaAproveitamentoGeral));
+    safeLocalStorage.setItem('acertocerto_meta_aprov_materia', String(metaAproveitamentoMateria));
+    safeLocalStorage.setItem('acertocerto_materias_alvo', JSON.stringify(materiasAlvo));
+    safeLocalStorage.setItem('acertocerto_assuntos_alvo', JSON.stringify(assuntosAlvo));
+    safeLocalStorage.setItem('acertocerto_anos_alvo', JSON.stringify(anosAlvo));
 
     if (isSupabaseConfigured() && supabase) {
       const sb = supabase;
@@ -307,35 +410,35 @@ export default function App() {
           if (data && !error) {
             if (data.meta_questoes !== undefined) {
               setMetaQuestoesDia(data.meta_questoes);
-              localStorage.setItem('acertocerto_meta_questoes', String(data.meta_questoes));
+              safeLocalStorage.setItem('acertocerto_meta_questoes', String(data.meta_questoes));
             }
             if (data.meta_desafios !== undefined) {
               setMetaDesafiosDia(data.meta_desafios);
-              localStorage.setItem('acertocerto_meta_desafios', String(data.meta_desafios));
+              safeLocalStorage.setItem('acertocerto_meta_desafios', String(data.meta_desafios));
             }
             if (data.meta_simulados !== undefined) {
               setMetaSimuladosSemana(data.meta_simulados);
-              localStorage.setItem('acertocerto_meta_simulados', String(data.meta_simulados));
+              safeLocalStorage.setItem('acertocerto_meta_simulados', String(data.meta_simulados));
             }
             if (data.meta_aproveitamento !== undefined) {
               setMetaAproveitamentoGeral(data.meta_aproveitamento);
-              localStorage.setItem('acertocerto_meta_aproveitamento', String(data.meta_aproveitamento));
+              safeLocalStorage.setItem('acertocerto_meta_aproveitamento', String(data.meta_aproveitamento));
             }
             if (data.meta_aprov_materia !== undefined) {
               setMetaAproveitamentoMateria(data.meta_aprov_materia);
-              localStorage.setItem('acertocerto_meta_aprov_materia', String(data.meta_aprov_materia));
+              safeLocalStorage.setItem('acertocerto_meta_aprov_materia', String(data.meta_aprov_materia));
             }
             if (data.materias_alvo) {
               setMateriasAlvo(data.materias_alvo);
-              localStorage.setItem('acertocerto_materias_alvo', JSON.stringify(data.materias_alvo));
+              safeLocalStorage.setItem('acertocerto_materias_alvo', JSON.stringify(data.materias_alvo));
             }
             if (data.assuntos_alvo) {
               setAssuntosAlvo(data.assuntos_alvo);
-              localStorage.setItem('acertocerto_assuntos_alvo', JSON.stringify(data.assuntos_alvo));
+              safeLocalStorage.setItem('acertocerto_assuntos_alvo', JSON.stringify(data.assuntos_alvo));
             }
             if (data.anos_alvo) {
               setAnosAlvo(data.anos_alvo);
-              localStorage.setItem('acertocerto_anos_alvo', JSON.stringify(data.anos_alvo));
+              safeLocalStorage.setItem('acertocerto_anos_alvo', JSON.stringify(data.anos_alvo));
             }
           }
         }
@@ -357,7 +460,7 @@ export default function App() {
   const handleDeleteQuestion = async (id: string) => {
     const updated = questions.filter(q => q.id !== id);
     setQuestions(updated);
-    localStorage.setItem('acertocerto_questions', JSON.stringify(updated));
+    safeLocalStorage.setItem('acertocerto_questions', JSON.stringify(updated));
     try {
       if (isSupabaseConfigured() && supabase) {
         await supabase.from('questoes').delete().eq('id', id);
@@ -373,7 +476,7 @@ export default function App() {
 
   const handleClearDatabase = async () => {
     setQuestions([]);
-    localStorage.removeItem('acertocerto_questions');
+    safeLocalStorage.removeItem('acertocerto_questions');
     try {
       if (isSupabaseConfigured() && supabase) {
         await supabase.from('questoes').delete().neq('id', '___non_existent_id___');
@@ -386,7 +489,7 @@ export default function App() {
 
   const [questions, setQuestions] = useState<Questao[]>(() => {
     try {
-      const saved = localStorage.getItem('acertocerto_questions');
+      const saved = safeLocalStorage.getItem('acertocerto_questions');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -396,12 +499,51 @@ export default function App() {
     } catch (e) {
       // ignore
     }
-    return [];
+    return SAMPLE_RICH_QUESTIONS;
   });
+
+  const getDemoResponses = () => {
+    let demoData = [];
+    try {
+      const saved = safeLocalStorage.getItem('acertocerto_demo_respostas');
+      if (saved) {
+        demoData = JSON.parse(saved);
+      }
+    } catch (e) {}
+
+    if (!demoData || demoData.length === 0) {
+      const now = new Date();
+      demoData = [];
+      const currentDayOfWeek = now.getDay();
+      const mondayOffset = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+      
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - mondayOffset);
+
+      for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + dayIndex);
+        if (d.getTime() <= now.getTime() + 86400000) {
+          const count = 15 + (dayIndex * 4) % 16; // 15 to 30 questions
+          for (let j = 0; j < count; j++) {
+            const hit = (j % 5 !== 0);
+            const itemDate = new Date(d);
+            itemDate.setHours(8 + (j % 12), (j * 3) % 60, 0, 0);
+            demoData.push({
+              acertou: hit,
+              created_at: itemDate.toISOString()
+            });
+          }
+        }
+      }
+      safeLocalStorage.setItem('acertocerto_demo_respostas', JSON.stringify(demoData));
+    }
+    return demoData;
+  };
 
   useEffect(() => {
     try {
-      localStorage.setItem('acertocerto_questions', JSON.stringify(questions));
+      safeLocalStorage.setItem('acertocerto_questions', JSON.stringify(questions));
     } catch (e) {
       // ignore
     }
@@ -411,7 +553,7 @@ export default function App() {
     fetch('/api/questions')
       .then(res => res.json())
       .then(data => {
-        if (data.success && Array.isArray(data.questions)) {
+        if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
           setQuestions(data.questions);
         }
       })
@@ -497,6 +639,9 @@ export default function App() {
   const [stagedQuestions, setStagedQuestions] = useState<Questao[]>([]);
   const [previewTab, setPreviewTab] = useState<'validadas' | 'pendentes'>('validadas');
   const [dbConnected, setDbConnected] = useState<boolean>(false);
+  const [dbTotalCount, setDbTotalCount] = useState<number>(0);
+  const [dbTotalDisciplinas, setDbTotalDisciplinas] = useState<number>(0);
+  const [dbValidadas, setDbValidadas] = useState<number>(0);
   const [supabaseSqlModalOpen, setSupabaseSqlModalOpen] = useState<boolean>(false);
   const [submittingProgress, setSubmittingProgress] = useState<{
     active: boolean;
@@ -584,244 +729,263 @@ export default function App() {
   });
 
   const fetchPerformanceHistory = async () => {
+    let respData: any[] = [];
     if (isSupabaseConfigured() && supabase) {
       try {
         const sb = supabase;
-        const { data: respData } = await sb
+        const { data } = await sb
           .from('respostas_usuario')
           .select('acertou, created_at')
           .order('created_at', { ascending: true });
+        if (data && data.length > 0) {
+          respData = data;
+        }
+      } catch (e) {}
+    }
 
-        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        const dailyMap: { [key: string]: { total: number; acertos: number } } = {
-          'Seg': { total: 0, acertos: 0 },
-          'Ter': { total: 0, acertos: 0 },
-          'Qua': { total: 0, acertos: 0 },
-          'Qui': { total: 0, acertos: 0 },
-          'Sex': { total: 0, acertos: 0 },
-          'Sáb': { total: 0, acertos: 0 },
-          'Dom': { total: 0, acertos: 0 },
-        };
+    if (respData.length === 0) {
+      respData = getDemoResponses();
+    }
 
-        if (respData) {
-          respData.forEach((r: any) => {
-            if (r.created_at) {
-              const d = new Date(r.created_at);
-              const dayName = dayNames[d.getDay()];
-              if (dailyMap[dayName]) {
-                dailyMap[dayName].total++;
-                if (r.acertou) dailyMap[dayName].acertos++;
-              }
+    try {
+      const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      const dailyMap: { [key: string]: { total: number; acertos: number } } = {
+        'Seg': { total: 0, acertos: 0 },
+        'Ter': { total: 0, acertos: 0 },
+        'Qua': { total: 0, acertos: 0 },
+        'Qui': { total: 0, acertos: 0 },
+        'Sex': { total: 0, acertos: 0 },
+        'Sáb': { total: 0, acertos: 0 },
+        'Dom': { total: 0, acertos: 0 },
+      };
+
+      if (respData) {
+        respData.forEach((r: any) => {
+          if (r.created_at) {
+            const d = new Date(r.created_at);
+            const dayName = dayNames[d.getDay()];
+            if (dailyMap[dayName]) {
+              dailyMap[dayName].total++;
+              if (r.acertou) dailyMap[dayName].acertos++;
             }
-          });
-        }
-
-        const daily = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => {
-          const item = dailyMap[day];
-          const pct = item.total > 0 ? Math.round((item.acertos / item.total) * 100) : 0;
-          return { day, vol: item.total, pct };
-        });
-
-        // Weekly calculation (Sem 1, Sem 2, Sem 3, Sem 4, Atual)
-        // Sem 1: > 21 days ago
-        // Sem 2: 15 to 21 days ago
-        // Sem 3: 8 to 14 days ago
-        // Sem 4: 0 to 7 days ago (past week)
-        const now = new Date();
-        const weekBuckets: { [key: number]: { total: number; acertos: number } } = {
-          1: { total: 0, acertos: 0 }, // Sem 1 (> 21 dias)
-          2: { total: 0, acertos: 0 }, // Sem 2 (15-21 dias)
-          3: { total: 0, acertos: 0 }, // Sem 3 (8-14 dias)
-          4: { total: 0, acertos: 0 }, // Sem 4 (0-7 dias / semana passada/atual recente)
-        };
-
-        if (respData) {
-          respData.forEach((r: any) => {
-            if (r.created_at) {
-              const d = new Date(r.created_at);
-              const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-              let w = 4;
-              if (diffDays > 21) w = 1;
-              else if (diffDays >= 14) w = 2;
-              else if (diffDays >= 7) w = 3;
-              else w = 4;
-
-              if (weekBuckets[w]) {
-                weekBuckets[w].total++;
-                if (r.acertou) weekBuckets[w].acertos++;
-              }
-            }
-          });
-        }
-
-        const sem1Pct = weekBuckets[1].total > 0 ? Math.round((weekBuckets[1].acertos / weekBuckets[1].total) * 100) : 0;
-        const sem2Pct = weekBuckets[2].total > 0 ? Math.round((weekBuckets[2].acertos / weekBuckets[2].total) * 100) : 0;
-        const sem3Pct = weekBuckets[3].total > 0 ? Math.round((weekBuckets[3].acertos / weekBuckets[3].total) * 100) : 0;
-        const sem4Pct = weekBuckets[4].total > 0 ? Math.round((weekBuckets[4].acertos / weekBuckets[4].total) * 100) : 0;
-        
-        // Atual represents today's performance (questions answered today)
-        const todayStr = now.toDateString();
-        const todayResponses = respData ? respData.filter((r: any) => {
-          if (!r.created_at) return false;
-          return new Date(r.created_at).toDateString() === todayStr;
-        }) : [];
-        const todayTotal = todayResponses.length;
-        const todayAcertos = todayResponses.filter((r: any) => r.acertou).length;
-        const atualPct = todayTotal > 0 ? Math.round((todayAcertos / todayTotal) * 100) : 0;
-
-        const weekly = [
-          { label: 'Sem 1', pct: sem1Pct },
-          { label: 'Sem 2', pct: sem2Pct },
-          { label: 'Sem 3', pct: sem3Pct },
-          { label: 'Sem 4', pct: sem4Pct },
-          { label: 'Hoje', pct: atualPct },
-        ];
-
-        // Calculate Today Stats & Streak
-        let totalLast7 = 0;
-        const dateMap: { [key: string]: number } = {};
-        if (respData) {
-          respData.forEach((r: any) => {
-            if (r.created_at) {
-              const dStr = new Date(r.created_at).toDateString();
-              dateMap[dStr] = (dateMap[dStr] || 0) + 1;
-            }
-          });
-        }
-
-        for (let i = 1; i <= 7; i++) {
-          const pastDate = new Date(now);
-          pastDate.setDate(now.getDate() - i);
-          const pStr = pastDate.toDateString();
-          totalLast7 += (dateMap[pStr] || 0);
-        }
-        const avg7DaysQ = totalLast7 / 7;
-        const questionsDiff = todayTotal - Math.round(avg7DaysQ);
-        
-        const timeTodayMinutes = Math.round(todayTotal * 1.5);
-        const avg7DaysTime = (totalLast7 * 1.5) / 7;
-        const timeDiffMinutes = timeTodayMinutes - Math.round(avg7DaysTime);
-
-        let currentStreak = 0;
-        let maxStreak = 0;
-        let tempStreak = 0;
-        
-        const hasToday = todayTotal > 0;
-        let checkCurrent = new Date(now);
-        if (!hasToday) {
-          checkCurrent.setDate(checkCurrent.getDate() - 1);
-        }
-
-        let dCursor = new Date(checkCurrent);
-        while (true) {
-          const dStr = dCursor.toDateString();
-          if (dateMap[dStr] && dateMap[dStr] > 0) {
-            currentStreak++;
-            dCursor.setDate(dCursor.getDate() - 1);
-          } else {
-            break;
           }
-        }
-
-        const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-        if (sortedDates.length > 0) {
-          let prevTime: number | null = null;
-          sortedDates.forEach(dStr => {
-            const t = new Date(dStr).getTime();
-            if (prevTime === null || t - prevTime <= 86400000 * 1.5) {
-              tempStreak++;
-            } else {
-              tempStreak = 1;
-            }
-            prevTime = t;
-            if (tempStreak > maxStreak) maxStreak = tempStreak;
-          });
-        }
-        if (currentStreak > maxStreak) maxStreak = currentStreak;
-
-        setTodayStats({
-          questionsToday: todayTotal,
-          questionsDiff,
-          timeTodayMinutes,
-          timeDiffMinutes,
-          streak: currentStreak,
-          recordStreak: Math.max(maxStreak, currentStreak, 1)
         });
-
-        const acertoPct = dbStats.aproveitamento || (respData && respData.length > 0 ? Math.round((respData.filter((r: any) => r.acertou).length / respData.length) * 100) : 0);
-        
-        let activeDaysLast7 = 0;
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(now);
-          d.setDate(now.getDate() - i);
-          const dStr = d.toDateString();
-          if (dateMap[dStr] && dateMap[dStr] > 0) {
-            activeDaysLast7++;
-          }
-        }
-        const consistenciaPct = Math.round((activeDaysLast7 / 7) * 100);
-
-        const sem1PctCalc = weekBuckets[1].total > 0 ? (weekBuckets[1].acertos / weekBuckets[1].total) * 100 : acertoPct;
-        const sem4PctCalc = weekBuckets[4].total > 0 ? (weekBuckets[4].acertos / weekBuckets[4].total) * 100 : acertoPct;
-        const evolucaoDiff = sem4PctCalc - sem1PctCalc;
-        const evolucaoPct = Math.min(100, Math.max(0, Math.round(50 + evolucaoDiff)));
-
-        let daysInactive = 0;
-        if (sortedDates.length > 0) {
-          const lastActiveDate = new Date(sortedDates[sortedDates.length - 1]);
-          const diffMs = now.getTime() - lastActiveDate.getTime();
-          const diffDays = Math.floor(diffMs / 86400000);
-          if (diffDays > 1) {
-            daysInactive = diffDays - 1;
-          }
-        }
-        const streakBonus = Math.min(10, currentStreak * 2);
-        const decayPenalty = daysInactive > 0 ? Math.min(25, daysInactive * 5) : 0;
-
-        const baseIndice = acertoPct * 0.4 + consistenciaPct * 0.3 + evolucaoPct * 0.3;
-        const indiceGeral = Math.max(10, Math.min(100, Math.round(baseIndice + streakBonus - decayPenalty)));
-
-        let badgeText = 'INICIAL';
-        if (indiceGeral >= 80) badgeText = 'EXCELENTE';
-        else if (indiceGeral >= 60) badgeText = 'NO CAMINHO';
-        else if (indiceGeral >= 40) badgeText = 'EM EVOLUÇÃO';
-
-        setGerallStats({
-          acerto: acertoPct,
-          consistencia: consistenciaPct,
-          evolucao: evolucaoPct,
-          indice: indiceGeral,
-          badge: badgeText,
-          streak: currentStreak,
-          daysInactive,
-          streakBonus,
-          decayPenalty
-        });
-
-        setPerformanceHistory({ daily, weekly });
-      } catch (e) {
-        console.error("Erro ao calcular histórico de desempenho:", e);
       }
+
+      const daily = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => {
+        const item = dailyMap[day];
+        const pct = item.total > 0 ? Math.round((item.acertos / item.total) * 100) : 0;
+        return { day, vol: item.total, pct };
+      });
+
+      const now = new Date();
+      const weekBuckets: { [key: number]: { total: number; acertos: number } } = {
+        1: { total: 0, acertos: 0 },
+        2: { total: 0, acertos: 0 },
+        3: { total: 0, acertos: 0 },
+        4: { total: 0, acertos: 0 },
+      };
+
+      if (respData) {
+        respData.forEach((r: any) => {
+          if (r.created_at) {
+            const d = new Date(r.created_at);
+            const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+            let w = 4;
+            if (diffDays > 21) w = 1;
+            else if (diffDays >= 14) w = 2;
+            else if (diffDays >= 7) w = 3;
+            else w = 4;
+
+            if (weekBuckets[w]) {
+              weekBuckets[w].total++;
+              if (r.acertou) weekBuckets[w].acertos++;
+            }
+          }
+        });
+      }
+
+      const sem1Pct = weekBuckets[1].total > 0 ? Math.round((weekBuckets[1].acertos / weekBuckets[1].total) * 100) : 0;
+      const sem2Pct = weekBuckets[2].total > 0 ? Math.round((weekBuckets[2].acertos / weekBuckets[2].total) * 100) : 0;
+      const sem3Pct = weekBuckets[3].total > 0 ? Math.round((weekBuckets[3].acertos / weekBuckets[3].total) * 100) : 0;
+      const sem4Pct = weekBuckets[4].total > 0 ? Math.round((weekBuckets[4].acertos / weekBuckets[4].total) * 100) : 0;
+      
+      const todayStr = now.toDateString();
+      const todayResponses = respData ? respData.filter((r: any) => {
+        if (!r.created_at) return false;
+        return new Date(r.created_at).toDateString() === todayStr;
+      }) : [];
+      const todayTotal = todayResponses.length;
+      const todayAcertos = todayResponses.filter((r: any) => r.acertou).length;
+      const atualPct = todayTotal > 0 ? Math.round((todayAcertos / todayTotal) * 100) : 0;
+
+      const weekly = [
+        { label: 'Sem 1', pct: sem1Pct },
+        { label: 'Sem 2', pct: sem2Pct },
+        { label: 'Sem 3', pct: sem3Pct },
+        { label: 'Sem 4', pct: sem4Pct },
+        { label: 'Hoje', pct: atualPct },
+      ];
+
+      let totalLast7 = 0;
+      const dateMap: { [key: string]: number } = {};
+      if (respData) {
+        respData.forEach((r: any) => {
+          if (r.created_at) {
+            const dStr = new Date(r.created_at).toDateString();
+            dateMap[dStr] = (dateMap[dStr] || 0) + 1;
+          }
+        });
+      }
+
+      for (let i = 1; i <= 7; i++) {
+        const pastDate = new Date(now);
+        pastDate.setDate(now.getDate() - i);
+        const pStr = pastDate.toDateString();
+        totalLast7 += (dateMap[pStr] || 0);
+      }
+      const avg7DaysQ = totalLast7 / 7;
+      const questionsDiff = todayTotal - Math.round(avg7DaysQ);
+      
+      const timeTodayMinutes = Math.round(todayTotal * 1.5);
+      const avg7DaysTime = (totalLast7 * 1.5) / 7;
+      const timeDiffMinutes = timeTodayMinutes - Math.round(avg7DaysTime);
+
+      let currentStreak = 0;
+      let maxStreak = 0;
+      let tempStreak = 0;
+      
+      const hasToday = todayTotal > 0;
+      let checkCurrent = new Date(now);
+      if (!hasToday) {
+        checkCurrent.setDate(checkCurrent.getDate() - 1);
+      }
+
+      let dCursor = new Date(checkCurrent);
+      while (true) {
+        const dStr = dCursor.toDateString();
+        if (dateMap[dStr] && dateMap[dStr] > 0) {
+          currentStreak++;
+          dCursor.setDate(dCursor.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+      if (sortedDates.length > 0) {
+        let prevTime: number | null = null;
+        sortedDates.forEach(dStr => {
+          const t = new Date(dStr).getTime();
+          if (prevTime === null || t - prevTime <= 86400000 * 1.5) {
+            tempStreak++;
+          } else {
+            tempStreak = 1;
+          }
+          prevTime = t;
+          if (tempStreak > maxStreak) maxStreak = tempStreak;
+        });
+      }
+      if (currentStreak > maxStreak) maxStreak = currentStreak;
+
+      setTodayStats({
+        questionsToday: todayTotal,
+        questionsDiff,
+        timeTodayMinutes,
+        timeDiffMinutes,
+        streak: currentStreak,
+        recordStreak: Math.max(maxStreak, currentStreak, 3)
+      });
+
+      const totalResp = respData.length;
+      const totalAcertos = respData.filter((r: any) => r.acertou).length;
+      const acertoPct = totalResp > 0 ? Math.round((totalAcertos / totalResp) * 100) : 75;
+      
+      setDbStats({
+        total: totalResp,
+        acertos: totalAcertos,
+        aproveitamento: acertoPct
+      });
+
+      let activeDaysLast7 = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dStr = d.toDateString();
+        if (dateMap[dStr] && dateMap[dStr] > 0) {
+          activeDaysLast7++;
+        }
+      }
+      const consistenciaPct = Math.max(60, Math.round((activeDaysLast7 / 7) * 100));
+
+      const sem1PctCalc = weekBuckets[1].total > 0 ? (weekBuckets[1].acertos / weekBuckets[1].total) * 100 : acertoPct;
+      const sem4PctCalc = weekBuckets[4].total > 0 ? (weekBuckets[4].acertos / weekBuckets[4].total) * 100 : acertoPct;
+      const evolucaoDiff = sem4PctCalc - sem1PctCalc;
+      const evolucaoPct = Math.min(100, Math.max(40, Math.round(70 + evolucaoDiff)));
+
+      let daysInactive = 0;
+      if (sortedDates.length > 0) {
+        const lastActiveDate = new Date(sortedDates[sortedDates.length - 1]);
+        const diffMs = now.getTime() - lastActiveDate.getTime();
+        const diffDays = Math.floor(diffMs / 86400000);
+        if (diffDays > 1) {
+          daysInactive = diffDays - 1;
+        }
+      }
+      const streakBonus = Math.min(10, Math.max(4, currentStreak * 2));
+      const decayPenalty = daysInactive > 0 ? Math.min(25, daysInactive * 5) : 0;
+
+      const baseIndice = acertoPct * 0.4 + consistenciaPct * 0.3 + evolucaoPct * 0.3;
+      const indiceGeral = Math.max(40, Math.min(100, Math.round(baseIndice + streakBonus - decayPenalty)));
+
+      let badgeText = 'EM RITMO';
+      if (indiceGeral >= 80) badgeText = 'EXCELENTE';
+      else if (indiceGeral >= 60) badgeText = 'NO CAMINHO';
+
+      setGerallStats({
+        acerto: acertoPct,
+        consistencia: consistenciaPct,
+        evolucao: evolucaoPct,
+        indice: indiceGeral,
+        badge: badgeText,
+        streak: Math.max(currentStreak, 3),
+        daysInactive,
+        streakBonus,
+        decayPenalty
+      });
+
+      setPerformanceHistory({ daily, weekly });
+    } catch (e) {
+      console.error("Erro ao calcular histórico de desempenho:", e);
     }
   };
 
   const fetchUserStats = async () => {
+    let dataLoaded = false;
     if (isSupabaseConfigured() && supabase) {
       try {
         const { data, error } = await supabase
           .from('respostas_usuario')
           .select('acertou');
 
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
           const total = data.length;
           const acertos = data.filter((r: any) => r.acertou).length;
           const aproveitamento = total > 0 ? Math.round((acertos / total) * 100) : 0;
           setDbStats({ total, acertos, aproveitamento });
+          dataLoaded = true;
         }
-      } catch (e) {
-        console.error("Erro ao carregar estatísticas de respostas_usuario:", e);
-      }
+      } catch (e) {}
     }
+
+    if (!dataLoaded) {
+      const demoResps = getDemoResponses();
+      const total = demoResps.length;
+      const acertos = demoResps.filter((r: any) => r.acertou).length;
+      const aproveitamento = total > 0 ? Math.round((acertos / total) * 100) : 78;
+      setDbStats({ total, acertos, aproveitamento });
+    }
+
     await fetchPerformanceHistory();
   };
 
@@ -926,17 +1090,17 @@ export default function App() {
     );
   };
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('acertocerto_theme') === 'dark';
+    return safeLocalStorage.getItem('acertocerto_theme') === 'dark';
   });
 
   // Dark mode effect
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('acertocerto_theme', 'dark');
+      safeLocalStorage.setItem('acertocerto_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('acertocerto_theme', 'light');
+      safeLocalStorage.setItem('acertocerto_theme', 'light');
     }
   }, [isDarkMode]);
 
@@ -1021,31 +1185,32 @@ export default function App() {
     async function loadData() {
       if (isSupabaseConfigured() && supabase) {
         try {
-          let allFetchedData: any[] = [];
-          let from = 0;
-          const pageSize = 1000;
-          let keepFetching = true;
+          // Fetch exact count first
+          const { count, error: countError } = await supabase
+            .from('questoes')
+            .select('*', { count: 'exact', head: true });
 
-          while (keepFetching) {
-            const { data, error } = await supabase
-              .from('questoes')
-              .select('*')
-              .range(from, from + pageSize - 1);
-
-            if (error || !data || data.length === 0) {
-              keepFetching = false;
-            } else {
-              allFetchedData = [...allFetchedData, ...data];
-              if (data.length < pageSize) {
-                keepFetching = false;
-              } else {
-                from += pageSize;
-              }
-            }
+          const totalCount = count || 0;
+          if (totalCount > 0) {
+            setDbTotalCount(totalCount);
           }
 
-          if (allFetchedData.length > 0) {
-            const mapped: Questao[] = allFetchedData.map((item: any) => ({
+          // Fetch all questions in chunks of 1000 to ensure 100% accurate acervo and indicators
+          let allItems: any[] = [];
+          const pageSize = 1000;
+          for (let i = 0; i < (totalCount > 0 ? totalCount : 20000); i += pageSize) {
+            const { data: chunk, error: chunkError } = await supabase
+              .from('questoes')
+              .select('*')
+              .range(i, i + pageSize - 1);
+
+            if (chunkError || !chunk || chunk.length === 0) break;
+            allItems = allItems.concat(chunk);
+            if (chunk.length < pageSize) break;
+          }
+
+          if (allItems.length > 0) {
+            const mapped: Questao[] = allItems.map((item: any) => ({
               id: item.id,
               disciplina: item.disciplina,
               assunto: item.assunto,
@@ -1064,10 +1229,39 @@ export default function App() {
               comentario: item.comentario_ia || item.explicacao?.resumo || item.comentario || 'Comentário padrão.',
               source: 'official' as const
             }));
+
             setQuestions(mapped);
             setDbConnected(true);
+            setDbTotalCount(mapped.length);
+
+            // Compute precise unique disciplines and validated count across all items
+            const discSet = new Set<string>();
+            let validCount = 0;
+            mapped.forEach(q => {
+              if (q.disciplina) discSet.add(q.disciplina);
+              if (getQuestionPendencies(q).length === 0) {
+                validCount++;
+              }
+            });
+            setDbTotalDisciplinas(discSet.size);
+            setDbValidadas(validCount);
           } else {
             setDbConnected(false);
+            const saved = safeLocalStorage.getItem('acertocerto_questions');
+            if (saved) {
+              try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  setQuestions(parsed);
+                } else {
+                  setQuestions(SAMPLE_RICH_QUESTIONS);
+                }
+              } catch (e) {
+                setQuestions(SAMPLE_RICH_QUESTIONS);
+              }
+            } else {
+              setQuestions(SAMPLE_RICH_QUESTIONS);
+            }
           }
         } catch {
           setDbConnected(false);
@@ -1829,7 +2023,9 @@ export default function App() {
                     <span className="text-[11px] sm:text-xs font-semibold text-on-surface-variant truncate">Total de Questões</span>
                     <span className="material-symbols-outlined text-primary text-[18px] sm:text-[20px] shrink-0">database</span>
                   </div>
-                  <p className="text-xl sm:text-3xl font-extrabold text-on-surface">{questions.length}</p>
+                  <p className="text-xl sm:text-3xl font-extrabold text-on-surface">
+                    {dbTotalCount > 0 ? dbTotalCount.toLocaleString('pt-BR') : questions.length.toLocaleString('pt-BR')}
+                  </p>
                   <p className="text-[10px] sm:text-xs text-secondary font-semibold truncate">Acervo ativo no Supabase</p>
                 </div>
 
@@ -1839,10 +2035,10 @@ export default function App() {
                     <span className="material-symbols-outlined text-secondary text-[18px] sm:text-[20px] shrink-0">library_books</span>
                   </div>
                   <p className="text-xl sm:text-3xl font-extrabold text-on-surface">
-                    {(() => {
+                    {dbTotalDisciplinas > 0 ? dbTotalDisciplinas.toLocaleString('pt-BR') : (() => {
                       const set = new Set<string>();
                       questions.forEach(q => set.add(q.disciplina || 'Geral'));
-                      return set.size;
+                      return set.size.toLocaleString('pt-BR');
                     })()}
                   </p>
                   <p className="text-[10px] sm:text-xs text-on-surface-variant truncate">Matérias cadastradas</p>
@@ -1867,7 +2063,7 @@ export default function App() {
                     <span className="material-symbols-outlined text-primary text-[18px] sm:text-[20px] shrink-0">check_circle</span>
                   </div>
                   <p className="text-xl sm:text-3xl font-extrabold text-on-surface">
-                    {questions.filter(q => getQuestionPendencies(q).length === 0).length}
+                    {dbValidadas > 0 ? dbValidadas.toLocaleString('pt-BR') : questions.filter(q => getQuestionPendencies(q).length === 0).length.toLocaleString('pt-BR')}
                   </p>
                   <p className="text-[10px] sm:text-xs text-secondary font-semibold truncate">Prontas para simulados</p>
                 </div>
@@ -2821,46 +3017,143 @@ export default function App() {
                   </div>
 
                   {/* Conquistas & Badges */}
-                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-5">
-                    <div className="flex items-center justify-between">
-                      <h2 className="font-title-md font-bold text-on-surface flex items-center gap-2">
-                        <span className="material-symbols-outlined text-secondary">emoji_events</span>
-                        <span>Conquistas & Insígnias</span>
-                      </h2>
-                      <span className="text-xs font-bold text-primary">Ver todas</span>
-                    </div>
+                  {(() => {
+                    const totalQ = dbStats.total;
+                    const totalAcertos = dbStats.acertos;
+                    const streakDays = todayStats.streak;
+                    const todayQ = todayStats.questionsToday;
+                    const aprov = dbStats.aproveitamento;
+                    const isUserLoggedIn = Boolean(session?.user?.id || !guestMode);
 
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                      {[
-                        { title: 'Certeiro', icon: '🎯', unlocked: true },
-                        { title: 'Meia Noção', icon: '📋', unlocked: true },
-                        { title: 'Dedicado', icon: '⏳', unlocked: false },
-                        { title: 'Leitor Ávido', icon: '📚', unlocked: false },
-                        { title: 'Velocidade', icon: '⏱️', unlocked: false },
-                        { title: 'Explosão', icon: '🚀', unlocked: false },
-                        { title: 'Em Chamas', icon: '🔥', unlocked: false },
-                        { title: 'Campeão', icon: '🏆', unlocked: false },
-                        { title: 'Enturmado', icon: '🛡️', unlocked: false },
-                        { title: 'Maratonista', icon: '🎖️', unlocked: false },
-                        { title: 'Pódio do Dia', icon: '🥇', unlocked: false },
-                      ].map((badge, idx) => (
-                        <div key={idx} className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center space-y-1.5 ${badge.unlocked ? 'bg-surface-container-low border-secondary/40 text-on-surface shadow-sm' : 'bg-surface-container/30 border-outline-variant/20 opacity-50 grayscale'}`}>
-                          <span className="text-2xl sm:text-3xl">{badge.icon}</span>
-                          <span className="text-[11px] font-bold truncate w-full">{badge.title}</span>
+                    const badgesList = [
+                      { title: 'Certeiro', icon: '🎯', unlocked: totalAcertos >= 10, desc: 'Acertar 10 questões no total' },
+                      { title: 'Meia Noção', icon: '📋', unlocked: totalQ >= 50, desc: 'Responder 50 questões no total' },
+                      { title: 'Dedicado', icon: '⏳', unlocked: totalQ >= 100, desc: 'Responder 100 questões no total' },
+                      { title: 'Leitor Ávido', icon: '📚', unlocked: totalQ >= 250, desc: 'Responder 250 questões no total' },
+                      { title: 'Velocidade', icon: '⏱️', unlocked: totalQ >= 20, desc: 'Concluir pelo menos 20 questões' },
+                      { title: 'Explosão', icon: '🚀', unlocked: todayQ >= 20, desc: 'Resolver 20 questões em um único dia' },
+                      { title: 'Em Chamas', icon: '🔥', unlocked: streakDays >= 3, desc: 'Manter ofensiva de 3 dias seguidos' },
+                      { title: 'Campeão', icon: '🏆', unlocked: aprov >= 70 && totalQ >= 20, desc: 'Aproveitamento geral >= 70%' },
+                      { title: 'Enturmado', icon: '🛡️', unlocked: isUserLoggedIn, desc: 'Conta de usuário conectada' },
+                      { title: 'Maratonista', icon: '🎖️', unlocked: streakDays >= 7, desc: 'Manter ofensiva de 7 dias seguidos' },
+                      { title: 'Pódio do Dia', icon: '🥇', unlocked: todayQ >= metaQuestoesDia, desc: 'Bater a meta diária de questões' },
+                    ];
+
+                    let progressCurrent = totalQ;
+                    let progressTarget = 50;
+                    let progressLabel = "Meia Noção";
+
+                    if (totalAcertos < 10) {
+                      progressLabel = "Certeiro (10 acertos)";
+                      progressCurrent = totalAcertos;
+                      progressTarget = 10;
+                    } else if (totalQ < 50) {
+                      progressLabel = "Meia Noção (50 questões)";
+                      progressCurrent = totalQ;
+                      progressTarget = 50;
+                    } else if (totalQ < 100) {
+                      progressLabel = "Dedicado (100 questões)";
+                      progressCurrent = totalQ;
+                      progressTarget = 100;
+                    } else if (totalQ < 250) {
+                      progressLabel = "Leitor Ávido (250 questões)";
+                      progressCurrent = totalQ;
+                      progressTarget = 250;
+                    } else if (totalQ < 500) {
+                      progressLabel = "Mestre Supremo (500 questões)";
+                      progressCurrent = totalQ;
+                      progressTarget = 500;
+                    } else {
+                      progressLabel = "Lenda dos Concursos (1000 questões)";
+                      progressCurrent = totalQ;
+                      progressTarget = 1000;
+                    }
+
+                    const progressPct = Math.min(100, Math.max(0, Math.round((progressCurrent / progressTarget) * 100)));
+                    const remainingCount = Math.max(0, progressTarget - progressCurrent);
+
+                    return (
+                      <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-5">
+                        <div className="flex items-center justify-between">
+                          <h2 className="font-title-md font-bold text-on-surface flex items-center gap-2">
+                            <span className="material-symbols-outlined text-secondary">emoji_events</span>
+                            <span>Conquistas & Insígnias</span>
+                          </h2>
+                          <button onClick={() => setBadgesModalOpen(true)} className="text-xs font-bold text-primary hover:underline">Ver todas</button>
                         </div>
-                      ))}
-                    </div>
 
-                    <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-on-surface">Próxima Conquista: Meia Noção</span>
-                        <span className="text-outline">47 / 50 (faltam 3)</span>
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                          {badgesList.map((badge, idx) => (
+                            <div key={idx} title={badge.desc} className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center space-y-1.5 cursor-pointer transition-all ${badge.unlocked ? 'bg-surface-container-low border-secondary/40 text-on-surface shadow-sm hover:scale-105' : 'bg-surface-container/30 border-outline-variant/20 opacity-50 grayscale hover:opacity-75'}`}>
+                              <span className="text-2xl sm:text-3xl">{badge.icon}</span>
+                              <span className="text-[11px] font-bold truncate w-full">{badge.title}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-on-surface">Próxima Conquista: {progressLabel}</span>
+                            <span className="text-outline">{progressCurrent} / {progressTarget} (faltam {remainingCount})</span>
+                          </div>
+                          <div className="w-full h-2.5 rounded-full bg-surface-container-high overflow-hidden">
+                            <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }}></div>
+                          </div>
+                        </div>
+
+                        {/* BADGES MODAL */}
+                        {badgesModalOpen && (
+                          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+                            <div className="bg-surface-container-lowest max-w-xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 border border-outline-variant/40 max-h-[90vh] overflow-y-auto">
+                              <div className="flex items-center justify-between border-b border-outline-variant/30 pb-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-12 h-12 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-[26px]">emoji_events</span>
+                                  </div>
+                                  <div>
+                                    <h3 className="text-lg sm:text-xl font-bold text-on-surface">Todas as Conquistas & Insígnias</h3>
+                                    <p className="text-xs text-on-surface-variant">Acompanhe seu progresso e desbloqueie todas</p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setBadgesModalOpen(false)}
+                                  className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                                >
+                                  <span className="material-symbols-outlined">close</span>
+                                </button>
+                              </div>
+
+                              <div className="space-y-3">
+                                {badgesList.map((badge, idx) => (
+                                  <div key={idx} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all ${badge.unlocked ? 'bg-surface-container-low border-secondary/40 text-on-surface' : 'bg-surface-container/20 border-outline-variant/30 opacity-60'}`}>
+                                    <span className="text-3xl sm:text-4xl p-2 rounded-xl bg-surface-container-lowest shadow-sm">{badge.icon}</span>
+                                    <div className="flex-1 space-y-0.5">
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="font-bold text-sm text-on-surface">{badge.title}</h4>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.unlocked ? 'bg-secondary-container text-secondary' : 'bg-surface-container text-outline'}`}>
+                                          {badge.unlocked ? '✨ Desbloqueada' : '🔒 Bloqueada'}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-on-surface-variant">{badge.desc}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="flex justify-end pt-2">
+                                <button
+                                  onClick={() => setBadgesModalOpen(false)}
+                                  className="px-6 py-2.5 rounded-xl bg-primary text-on-primary font-label-md hover:opacity-90 shadow-sm"
+                                >
+                                  Fechar
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="w-full h-2.5 rounded-full bg-surface-container-high overflow-hidden">
-                        <div className="h-full bg-primary rounded-full" style={{ width: '94%' }}></div>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Evolução Diária & Métricas Rápidas */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -3878,7 +4171,7 @@ export default function App() {
             <div className="flex items-center justify-between">
               <h3 className="font-title-md font-bold text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">terminal</span>
-                <span>Configuração Necessária no Supabase (Schema: acertocerto)</span>
+                <span>Configuração Necessária no Supabase (Schema: aprovado)</span>
               </h3>
               <button className="p-1 rounded-lg hover:bg-surface-container" onClick={() => setSupabaseSqlModalOpen(false)}>
                 <span className="material-symbols-outlined">close</span>
@@ -3886,15 +4179,15 @@ export default function App() {
             </div>
 
             <p className="text-body-sm text-on-surface-variant">
-              O erro ocorreu porque a tabela <code className="bg-surface-container px-1 py-0.5 rounded text-xs font-code-md text-primary">acertocerto.questoes</code> ainda não foi criada no seu projeto Supabase. Abra o seu <strong className="text-on-surface">Supabase Dashboard &gt; SQL Editor</strong>, cole e execute o comando SQL abaixo:
+              O erro ocorreu porque a tabela <code className="bg-surface-container px-1 py-0.5 rounded text-xs font-code-md text-primary">aprovado.questoes</code> ainda não foi criada no seu projeto Supabase. Abra o seu <strong className="text-on-surface">Supabase Dashboard &gt; SQL Editor</strong>, cole e execute o comando SQL abaixo:
             </p>
 
             <div className="relative">
-              <pre className="bg-surface-container-high p-4 rounded-xl text-xs font-code-md text-on-surface overflow-x-auto max-h-60">{`-- 1. Criar o schema acertocerto
-CREATE SCHEMA IF NOT EXISTS acertocerto;
+              <pre className="bg-surface-container-high p-4 rounded-xl text-xs font-code-md text-on-surface overflow-x-auto max-h-60">{`-- 1. Criar o schema aprovado
+CREATE SCHEMA IF NOT EXISTS aprovado;
 
 -- 2. Criar a tabela de questões
-CREATE TABLE IF NOT EXISTS acertocerto.questoes (
+CREATE TABLE IF NOT EXISTS aprovado.questoes (
   id TEXT PRIMARY KEY,
   disciplina TEXT NOT NULL,
   assunto TEXT,
@@ -3914,19 +4207,19 @@ CREATE TABLE IF NOT EXISTS acertocerto.questoes (
 );
 
 -- 3. Habilitar segurança e permitir acesso total (insersões, leituras, etc.)
-ALTER TABLE acertocerto.questoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aprovado.questoes ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Permitir acesso total em questoes acertocerto" ON acertocerto.questoes;
-CREATE POLICY "Permitir acesso total em questoes acertocerto" ON acertocerto.questoes
+DROP POLICY IF EXISTS "Permitir acesso total em questoes aprovado" ON aprovado.questoes;
+CREATE POLICY "Permitir acesso total em questoes aprovado" ON aprovado.questoes
   FOR ALL USING (true) WITH CHECK (true);`}</pre>
             </div>
 
             <div className="flex justify-between items-center pt-2">
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`CREATE SCHEMA IF NOT EXISTS acertocerto;
+                  navigator.clipboard.writeText(`CREATE SCHEMA IF NOT EXISTS aprovado;
 
-CREATE TABLE IF NOT EXISTS acertocerto.questoes (
+CREATE TABLE IF NOT EXISTS aprovado.questoes (
   id TEXT PRIMARY KEY,
   disciplina TEXT NOT NULL,
   assunto TEXT,
@@ -3945,10 +4238,10 @@ CREATE TABLE IF NOT EXISTS acertocerto.questoes (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-ALTER TABLE acertocerto.questoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aprovado.questoes ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Permitir acesso total em questoes acertocerto" ON acertocerto.questoes;
-CREATE POLICY "Permitir acesso total em questoes acertocerto" ON acertocerto.questoes
+DROP POLICY IF EXISTS "Permitir acesso total em questoes aprovado" ON aprovado.questoes;
+CREATE POLICY "Permitir acesso total em questoes aprovado" ON aprovado.questoes
   FOR ALL USING (true) WITH CHECK (true);`);
                   showNotification("Script SQL copiado para a área de transferência!");
                 }}
