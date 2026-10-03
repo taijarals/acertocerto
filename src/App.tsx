@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from './services/supabase';
 
 interface Alternativa {
@@ -495,7 +495,7 @@ export default function App() {
     } catch (e) {}
   }, []);
 
-  const [questions, setQuestions] = useState<Questao[]>(SAMPLE_RICH_QUESTIONS);
+  const [questions, setQuestions] = useState<Questao[]>([]);
 
   const getDemoResponses = () => {
     let demoData = [];
@@ -1141,6 +1141,85 @@ export default function App() {
     }
   };
 
+  const questionStartTimestampRef = useRef<number>(Date.now());
+
+  const [desempenhoMaterias, setDesempenhoMaterias] = useState<any[]>([]);
+  const [habitosEstudo, setHabitosEstudo] = useState<any | null>(null);
+  const [desempenhoLoading, setDesempenhoLoading] = useState<boolean>(false);
+
+  const fetchDesempenhoReal = async () => {
+    if (!isSupabaseConfigured() || !supabase) return;
+    setDesempenhoLoading(true);
+    try {
+      const [resMat, resHab] = await Promise.all([
+        supabase.rpc('desempenho_por_materia'),
+        supabase.rpc('habitos_estudo')
+      ]);
+      if (resMat.error) {
+        console.error('[Supabase] desempenho:', resMat.error);
+      } else if (resMat.data) {
+        setDesempenhoMaterias(resMat.data);
+      }
+      if (resHab.error) {
+        console.error('[Supabase] desempenho:', resHab.error);
+      } else if (resHab.data) {
+        setHabitosEstudo(resHab.data);
+      }
+    } catch (error) {
+      console.error('[Supabase] desempenho:', error);
+    } finally {
+      setDesempenhoLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'desempenho') {
+      fetchDesempenhoReal();
+    }
+  }, [activeTab, session]);
+
+  const formatTempoMedio = (seg: number | null) => {
+    if (seg === null || seg === undefined) return '—';
+    if (seg < 60) return `${seg} seg`;
+    const m = Math.floor(seg / 60);
+    const s = seg % 60;
+    if (s === 0) return `${m} min`;
+    return `${m} min ${s} seg`;
+  };
+
+  const formatUltimaPratica = (isoString: string | null) => {
+    if (!isoString) return 'Nunca';
+    try {
+      const d = new Date(isoString);
+      const now = new Date();
+      const options: Intl.DateTimeFormatOptions = { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' };
+      const formatter = new Intl.DateTimeFormat('en-CA', options);
+      const dateStr = formatter.format(d);
+      const todayStr = formatter.format(now);
+      const dTime = new Date(dateStr).getTime();
+      const todayTime = new Date(todayStr).getTime();
+      const diffDays = Math.round((todayTime - dTime) / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return 'Hoje';
+      if (diffDays === 1) return 'Ontem';
+      if (diffDays > 1) return `há ${diffDays} dias`;
+      return 'Hoje';
+    } catch (e) {
+      return 'Hoje';
+    }
+  };
+
+  const formatDateRange = (inicio: string, fim: string) => {
+    try {
+      const di = new Date(inicio);
+      const df = new Date(fim);
+      const si = di.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' });
+      const sf = df.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' });
+      return `${si} – ${sf}`;
+    } catch (e) {
+      return `${inicio} – ${fim}`;
+    }
+  };
+
   const fetchUserStats = async () => {
     let dataLoaded = false;
     if (isSupabaseConfigured() && supabase) {
@@ -1168,6 +1247,7 @@ export default function App() {
     }
 
     await fetchPerformanceHistory();
+    await fetchDesempenhoReal();
   };
 
   useEffect(() => {
@@ -1433,13 +1513,15 @@ export default function App() {
     // Persist to Supabase acertocerto.respostas_usuario table
     if (isSupabaseConfigured() && supabase) {
       const sb = supabase;
+      const tempo_segundos = Math.min(3600, Math.max(1, Math.round((Date.now() - questionStartTimestampRef.current) / 1000)));
       sb.auth.getSession().then(({ data: { session } }) => {
         const userId = session?.user?.id || null;
         sb.from('respostas_usuario').insert({
           user_id: userId,
           questao_id: currentQ.id,
           resposta_usuario: selectedOption,
-          acertou: isCorrect
+          acertou: isCorrect,
+          tempo_segundos
         }).then(({ error }) => {
           if (error) {
             console.error('Erro ao salvar resposta no Supabase:', error);
@@ -1474,6 +1556,7 @@ export default function App() {
   };
 
   const handleNextQuestion = () => {
+    questionStartTimestampRef.current = Date.now();
     if (currentIndex < activeRoundQuestions.length - 1) {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
@@ -1485,6 +1568,7 @@ export default function App() {
   };
 
   const handleJumpToQuestion = (idx: number) => {
+    questionStartTimestampRef.current = Date.now();
     if (idx < activeRoundQuestions.length) {
       setCurrentIndex(idx);
       setSelectedOption(answers[idx]);
@@ -1496,8 +1580,8 @@ export default function App() {
     setRoundLoading(true);
     setRoundType('desafio');
     let roundQuestions: Questao[] = [];
-    try {
-      if (isSupabaseConfigured() && supabase) {
+    if (isSupabaseConfigured() && supabase) {
+      try {
         const { data, error } = await supabase.rpc('sortear_questoes', {
           p_disciplinas: null,
           p_assuntos: null,
@@ -1505,12 +1589,26 @@ export default function App() {
           p_anos: null,
           p_limite: count
         });
-        if (!error && Array.isArray(data) && data.length > 0) {
-          roundQuestions = data.map(mapearQuestao);
+        if (error) {
+          console.error('[Supabase] sortear_questoes:', error);
+          showNotification("Não foi possível carregar as questões. Tente novamente.");
+          setRoundLoading(false);
+          return;
         }
+        if (Array.isArray(data) && data.length > 0) {
+          roundQuestions = data.map(mapearQuestao);
+        } else {
+          showNotification("Nenhuma questão encontrada.");
+          setRoundLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('[Supabase] sortear_questoes:', error);
+        showNotification("Não foi possível carregar as questões. Tente novamente.");
+        setRoundLoading(false);
+        return;
       }
-    } catch (e) {}
-    if (roundQuestions.length === 0) {
+    } else {
       const pool = questions.length > 0 ? questions : SAMPLE_RICH_QUESTIONS;
       const shuffled = [...pool].sort(() => 0.5 - Math.random());
       roundQuestions = shuffled.slice(0, Math.min(count, shuffled.length));
@@ -1520,6 +1618,7 @@ export default function App() {
       showNotification("Nenhuma questão encontrada.");
       return;
     }
+    questionStartTimestampRef.current = Date.now();
     setActiveRoundQuestions(roundQuestions);
     setAnswers(new Array(roundQuestions.length).fill(null));
     setCurrentIndex(0);
@@ -1542,8 +1641,8 @@ export default function App() {
       return;
     }
     let roundQuestions: Questao[] = [];
-    try {
-      if (isSupabaseConfigured() && supabase) {
+    if (isSupabaseConfigured() && supabase) {
+      try {
         const { data, error } = await supabase.rpc('sortear_questoes', {
           p_disciplinas: selectedDisciplinas.length > 0 ? selectedDisciplinas : null,
           p_assuntos: selectedAssuntos.length > 0 ? selectedAssuntos : null,
@@ -1551,12 +1650,26 @@ export default function App() {
           p_anos: selectedAnos.length > 0 ? selectedAnos : null,
           p_limite: configCount
         });
-        if (!error && Array.isArray(data) && data.length > 0) {
-          roundQuestions = data.map(mapearQuestao);
+        if (error) {
+          console.error('[Supabase] sortear_questoes:', error);
+          showNotification("Não foi possível carregar as questões. Tente novamente.");
+          setRoundLoading(false);
+          return;
         }
+        if (Array.isArray(data) && data.length > 0) {
+          roundQuestions = data.map(mapearQuestao);
+        } else {
+          showNotification("Nenhuma questão encontrada para os filtros selecionados.");
+          setRoundLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('[Supabase] sortear_questoes:', error);
+        showNotification("Não foi possível carregar as questões. Tente novamente.");
+        setRoundLoading(false);
+        return;
       }
-    } catch (e) {}
-    if (roundQuestions.length === 0) {
+    } else {
       const shuffled = [...matchingFilteredQuestions].sort(() => 0.5 - Math.random());
       const countToUse = Math.min(configCount, availableCount);
       roundQuestions = shuffled.slice(0, countToUse);
@@ -1566,6 +1679,7 @@ export default function App() {
       showNotification("Nenhuma questão encontrada para os filtros selecionados.");
       return;
     }
+    questionStartTimestampRef.current = Date.now();
     setActiveRoundQuestions(roundQuestions);
     setAnswers(new Array(roundQuestions.length).fill(null));
     setCurrentIndex(0);
@@ -1583,8 +1697,8 @@ export default function App() {
     setRoundLoading(true);
     setRoundType('desafio');
     let roundQuestions: Questao[] = [];
-    try {
-      if (isSupabaseConfigured() && supabase) {
+    if (isSupabaseConfigured() && supabase) {
+      try {
         const { data, error } = await supabase.rpc('sortear_questoes', {
           p_disciplinas: [disciplina],
           p_assuntos: null,
@@ -1592,12 +1706,26 @@ export default function App() {
           p_anos: null,
           p_limite: 5
         });
-        if (!error && Array.isArray(data) && data.length > 0) {
-          roundQuestions = data.map(mapearQuestao);
+        if (error) {
+          console.error('[Supabase] sortear_questoes:', error);
+          showNotification("Não foi possível carregar as questões. Tente novamente.");
+          setRoundLoading(false);
+          return;
         }
+        if (Array.isArray(data) && data.length > 0) {
+          roundQuestions = data.map(mapearQuestao);
+        } else {
+          showNotification(`Nenhuma questão encontrada para a disciplina ${disciplina}.`);
+          setRoundLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('[Supabase] sortear_questoes:', error);
+        showNotification("Não foi possível carregar as questões. Tente novamente.");
+        setRoundLoading(false);
+        return;
       }
-    } catch (e) {}
-    if (roundQuestions.length === 0) {
+    } else {
       const pool = questions.length > 0 ? questions : SAMPLE_RICH_QUESTIONS;
       const filtered = pool.filter(q => q.disciplina === disciplina);
       const shuffled = [...filtered].sort(() => 0.5 - Math.random());
@@ -1608,6 +1736,7 @@ export default function App() {
       showNotification(`Nenhuma questão encontrada para a disciplina ${disciplina}.`);
       return;
     }
+    questionStartTimestampRef.current = Date.now();
     setActiveRoundQuestions(roundQuestions);
     setAnswers(new Array(roundQuestions.length).fill(null));
     setCurrentIndex(0);
@@ -1625,8 +1754,8 @@ export default function App() {
     setRoundLoading(true);
     setRoundType('desafio');
     let roundQuestions: Questao[] = [];
-    try {
-      if (isSupabaseConfigured() && supabase) {
+    if (isSupabaseConfigured() && supabase) {
+      try {
         const p_disc = discipline ? [discipline] : (materiasAlvo.length > 0 ? materiasAlvo : null);
         const { data, error } = await supabase.rpc('sortear_questoes', {
           p_disciplinas: p_disc,
@@ -1635,12 +1764,26 @@ export default function App() {
           p_anos: anosAlvo.length > 0 ? anosAlvo : null,
           p_limite: 5
         });
-        if (!error && Array.isArray(data) && data.length > 0) {
-          roundQuestions = data.map(mapearQuestao);
+        if (error) {
+          console.error('[Supabase] sortear_questoes:', error);
+          showNotification("Não foi possível carregar as questões. Tente novamente.");
+          setRoundLoading(false);
+          return;
         }
+        if (Array.isArray(data) && data.length > 0) {
+          roundQuestions = data.map(mapearQuestao);
+        } else {
+          showNotification(`Nenhuma questão encontrada para os critérios configurados de ano, disciplina e assuntos alvo.`);
+          setRoundLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('[Supabase] sortear_questoes:', error);
+        showNotification("Não foi possível carregar as questões. Tente novamente.");
+        setRoundLoading(false);
+        return;
       }
-    } catch (e) {}
-    if (roundQuestions.length === 0) {
+    } else {
       const pool = questions.length > 0 ? questions : SAMPLE_RICH_QUESTIONS;
       const filtered = pool.filter(q => {
         if (anosAlvo.length > 0 && (!q.ano || !anosAlvo.includes(q.ano))) return false;
@@ -1657,6 +1800,7 @@ export default function App() {
       showNotification(`Nenhuma questão encontrada para os critérios configurados de ano, disciplina e assuntos alvo.`);
       return;
     }
+    questionStartTimestampRef.current = Date.now();
     setActiveRoundQuestions(roundQuestions);
     setAnswers(new Array(roundQuestions.length).fill(null));
     setCurrentIndex(0);
@@ -3390,6 +3534,11 @@ export default function App() {
               {/* ================= SUB-TAB: MATÉRIAS ================= */}
               {desempenhoSubTab === 'materias' && (
                 <div className="space-y-6 animate-fadeIn">
+                  {isSupabaseConfigured() && !session?.user && (
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-center text-xs text-on-surface-variant font-medium">
+                      Entre na sua conta para ver seu desempenho.
+                    </div>
+                  )}
                   <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-2xl bg-primary-fixed/40 text-primary flex items-center justify-center">
@@ -3403,52 +3552,84 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(() => {
-                      const map = new Map<string, number>();
-                      questions.forEach(q => {
-                        const disc = q.disciplina || 'Geral';
-                        map.set(disc, (map.get(disc) || 0) + 1);
-                      });
-                      const subjects = Array.from(map.keys());
-                      if (subjects.length === 0) {
+                    {desempenhoMaterias.length === 0 ? (
+                      <div className="col-span-full p-12 text-center bg-surface-container-low rounded-2xl border border-outline-variant/30">
+                        <p className="text-xs text-outline italic">Responda algumas questões para ver seu retrato por matéria.</p>
+                      </div>
+                    ) : (
+                      desempenhoMaterias.map((item, i) => {
+                        const status = item.status || 'poucos_dados';
+                        let badgeText = `Poucos dados (${item.respostas || 0} resp.)`;
+                        let badgeClass = 'bg-surface-container text-outline';
+                        if (status === 'solido') {
+                          badgeText = `Sólido (${item.aproveitamento ?? 0}%)`;
+                          badgeClass = 'bg-secondary-container/50 text-secondary';
+                        } else if (status === 'em_evolucao') {
+                          badgeText = `Em Evolução (${item.aproveitamento ?? 0}%)`;
+                          badgeClass = 'bg-tertiary-container/50 text-tertiary';
+                        } else if (status === 'em_atencao') {
+                          badgeText = `Em Atenção (${item.aproveitamento ?? 0}%)`;
+                          badgeClass = 'bg-error-container/50 text-error';
+                        }
+
+                        const aprov = item.aproveitamento ?? 0;
+                        let dominioText = '—';
+                        if (status !== 'poucos_dados') {
+                          if (aprov >= 75) dominioText = 'Alto';
+                          else if (aprov >= 60) dominioText = 'Moderado';
+                          else dominioText = 'Baixo';
+                        }
+
+                        const tendencia = item.tendencia;
+                        let tendenciaEl = null;
+                        if (tendencia === 'subindo') {
+                          tendenciaEl = <p className="text-[11px] font-semibold text-primary">↑ subindo nos últimos 7 dias ({item.aproveitamento_7d ?? 0}% vs {item.aproveitamento_anterior ?? 0}%)</p>;
+                        } else if (tendencia === 'caindo') {
+                          tendenciaEl = <p className="text-[11px] font-semibold text-error">↓ caindo nos últimos 7 dias ({item.aproveitamento_7d ?? 0}% vs {item.aproveitamento_anterior ?? 0}%)</p>;
+                        } else if (tendencia === 'estavel') {
+                          tendenciaEl = <p className="text-[11px] font-semibold text-outline">→ estável</p>;
+                        }
+
                         return (
-                          <div className="col-span-full p-12 text-center bg-surface-container-low rounded-2xl border border-outline-variant/30">
-                            <p className="text-xs text-outline italic">Nenhuma matéria registrada no momento.</p>
+                          <div key={i} className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-title-md font-bold text-on-surface">{item.disciplina || 'Geral'}</h3>
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass}`}>
+                                {badgeText}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-xs text-on-surface-variant">
+                                <span>Domínio na Matéria</span>
+                                <span className="font-bold text-on-surface">{dominioText}</span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+                                <div className={`h-full rounded-full ${aprov >= 75 ? 'bg-secondary' : aprov >= 60 ? 'bg-tertiary' : 'bg-error'}`} style={{ width: `${status === 'poucos_dados' ? 0 : aprov}%` }}></div>
+                              </div>
+                              {tendenciaEl}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 pt-2">
+                              <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                                <p className="text-[11px] font-semibold text-outline">Ritmo Médio</p>
+                                <p className="text-sm font-bold text-on-surface mt-0.5">
+                                  {formatTempoMedio(item.tempo_medio_seg)}
+                                  {item.tempo_medio_seg === null && <span className="block text-[10px] text-outline font-normal">registrando a partir de agora</span>}
+                                </p>
+                              </div>
+                              <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                                <p className="text-[11px] font-semibold text-outline">Última Prática</p>
+                                <p className="text-sm font-bold text-on-surface mt-0.5">{formatUltimaPratica(item.ultima_pratica)}</p>
+                              </div>
+                            </div>
+                            <div className="text-[11px] text-on-surface-variant text-right font-medium">
+                              {item.respostas || 0} respostas · {item.acertos || 0} acertos
+                            </div>
                           </div>
                         );
-                      }
-                      return subjects.map((sub, i) => (
-                        <div key={sub} className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-title-md font-bold text-on-surface">{sub}</h3>
-                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-secondary-container/50 text-secondary">
-                              {i % 2 === 0 ? 'Sólido (82%)' : 'Em Atenção (61%)'}
-                            </span>
-                          </div>
-
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-xs text-on-surface-variant">
-                              <span>Domínio na Matéria</span>
-                              <span className="font-bold text-on-surface">{i % 2 === 0 ? 'Alto' : 'Moderado'}</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
-                              <div className={`h-full rounded-full ${i % 2 === 0 ? 'bg-secondary' : 'bg-tertiary'}`} style={{ width: i % 2 === 0 ? '82%' : '61%' }}></div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3 pt-2">
-                            <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                              <p className="text-[11px] font-semibold text-outline">Ritmo Médio</p>
-                              <p className="text-sm font-bold text-on-surface mt-0.5">1 min 12 seg</p>
-                            </div>
-                            <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                              <p className="text-[11px] font-semibold text-outline">Última Prática</p>
-                              <p className="text-sm font-bold text-on-surface mt-0.5">Hoje</p>
-                            </div>
-                          </div>
-                        </div>
-                      ));
-                    })()}
+                      })
+                    )}
                   </div>
                 </div>
               )}
@@ -3456,6 +3637,11 @@ export default function App() {
               {/* ================= SUB-TAB: HÁBITOS ================= */}
               {desempenhoSubTab === 'habitos' && (
                 <div className="space-y-6 animate-fadeIn">
+                  {isSupabaseConfigured() && !session?.user && (
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-center text-xs text-on-surface-variant font-medium">
+                      Entre na sua conta para ver seu desempenho.
+                    </div>
+                  )}
                   <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-2xl bg-tertiary-container/40 text-tertiary flex items-center justify-center">
@@ -3473,28 +3659,36 @@ export default function App() {
                           <span className="material-symbols-outlined text-primary text-[20px]">schedule</span>
                           <span>Distribuição por Hora do Dia</span>
                         </h3>
-                        <div className="space-y-2 text-xs">
-                          <div>
-                            <div className="flex justify-between font-semibold mb-1 text-on-surface-variant">
-                              <span>Manhã (06h - 12h)</span>
-                              <span>35% acerto</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: '35%' }}></div></div>
-                          </div>
-                          <div>
-                            <div className="flex justify-between font-semibold mb-1 text-on-surface-variant">
-                              <span>Tarde (12h - 18h)</span>
-                              <span>45% acerto</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden"><div className="h-full bg-secondary rounded-full" style={{ width: '45%' }}></div></div>
-                          </div>
-                          <div>
-                            <div className="flex justify-between font-semibold mb-1 text-on-surface-variant">
-                              <span>Noite (18h - 00h)</span>
-                              <span>15% acerto</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden"><div className="h-full bg-tertiary rounded-full" style={{ width: '15%' }}></div></div>
-                          </div>
+                        <div className="space-y-3 text-xs">
+                          {habitosEstudo?.por_periodo && habitosEstudo.por_periodo.length > 0 ? (
+                            habitosEstudo.por_periodo.map((p: any, idx: number) => {
+                              const isMelhor = habitosEstudo.melhor_periodo && p.chave === habitosEstudo.melhor_periodo;
+                              const hasData = p.aproveitamento !== null && p.aproveitamento !== undefined;
+                              return (
+                                <div key={idx} className="space-y-1">
+                                  <div className="flex justify-between font-semibold text-on-surface-variant items-center">
+                                    <span className="flex items-center gap-2">
+                                      {p.rotulo}
+                                      {isMelhor && (
+                                        <span className="px-2 py-0.5 rounded-full bg-primary-container text-primary text-[10px] font-bold">
+                                          Seu melhor horário
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span>{hasData ? `${p.aproveitamento}% acerto · ${p.respostas} resp.` : 'sem respostas'}</span>
+                                  </div>
+                                  <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+                                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${hasData ? p.aproveitamento : 0}%` }}></div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-xs text-outline italic">Nenhum dado de horário registrado.</p>
+                          )}
+                          {!habitosEstudo?.melhor_periodo && (
+                            <p className="text-[11px] text-outline pt-1">Responda pelo menos 10 questões num período para identificar seu melhor horário.</p>
+                          )}
                         </div>
                       </div>
 
@@ -3504,8 +3698,25 @@ export default function App() {
                           <span>Taxa de Recuperação de Erros</span>
                         </h3>
                         <div className="text-center py-4 space-y-2">
-                          <p className="text-4xl font-extrabold text-secondary">72%</p>
-                          <p className="text-xs text-on-surface-variant max-w-xs mx-auto">Você acerta 72% das questões que errou anteriormente após revisar o comentário pedagógico.</p>
+                          {(() => {
+                            const rec = habitosEstudo?.recuperacao || { erros: 0, refeitas: 0, recuperadas: 0, taxa: null };
+                            const hasEnough = rec.refeitas >= 5;
+                            return hasEnough ? (
+                              <>
+                                <p className="text-4xl font-extrabold text-secondary">{rec.taxa}%</p>
+                                <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
+                                  Das {rec.refeitas} questões que você errou e refez, acertou {rec.recuperadas} na tentativa seguinte. Você ainda não refez {Math.max(0, rec.erros - rec.refeitas)} questões erradas.
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-4xl font-extrabold text-outline">—</p>
+                                <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
+                                  Poucos dados: refaça questões que você errou para medir sua recuperação ({rec.refeitas} até agora).
+                                </p>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -3516,14 +3727,40 @@ export default function App() {
                         <span>Consistência das Últimas 6 Semanas & Calendário</span>
                       </h3>
                       <div className="grid grid-cols-6 gap-2 pt-2">
-                        {['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'].map((week, idx) => (
-                          <div key={idx} className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-1">
-                            <span className="text-[11px] font-bold text-outline">{week}</span>
-                            <div className="w-6 h-6 mx-auto rounded-full bg-secondary text-on-secondary flex items-center justify-center text-xs font-bold">
-                              {idx < 2 ? '✓' : '-'}
+                        {habitosEstudo?.semanas && habitosEstudo.semanas.length > 0 ? (
+                          habitosEstudo.semanas.map((sem: any, idx: number) => {
+                            const diasAtivos = sem.dias_ativos || 0;
+                            let circleBg = 'bg-surface-container text-outline';
+                            let circleContent = '-';
+                            if (diasAtivos >= 3) {
+                              circleBg = 'bg-secondary text-on-secondary';
+                              circleContent = '✓';
+                            } else if (diasAtivos >= 1) {
+                              circleBg = 'bg-tertiary text-on-tertiary';
+                              circleContent = String(diasAtivos);
+                            }
+                            const tooltipStr = `${formatDateRange(sem.inicio, sem.fim)} — ${sem.respostas || 0} resp. · ${sem.aproveitamento ?? 0}%`;
+                            return (
+                              <div key={idx} title={tooltipStr} className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-1 cursor-pointer">
+                                <span className="text-[11px] font-bold text-outline">{sem.rotulo || `Sem ${idx + 1}`}</span>
+                                <div className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center text-xs font-bold ${circleBg}`}>
+                                  {circleContent}
+                                </div>
+                                <span className="block text-[10px] text-on-surface-variant">{diasAtivos}/7 dias</span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'].map((week, idx) => (
+                            <div key={idx} className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-1">
+                              <span className="text-[11px] font-bold text-outline">{week}</span>
+                              <div className="w-7 h-7 mx-auto rounded-full bg-surface-container text-outline flex items-center justify-center text-xs font-bold">
+                                -
+                              </div>
+                              <span className="block text-[10px] text-on-surface-variant">0/7 dias</span>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>
