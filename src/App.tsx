@@ -944,7 +944,7 @@ export default function App() {
         const sb = supabase;
         const { data } = await sb
           .from('respostas_usuario')
-          .select('acertou, created_at')
+          .select('acertou, created_at, tempo_segundos')
           .order('created_at', { ascending: true });
         if (data && data.length > 0) {
           respData = data;
@@ -952,7 +952,7 @@ export default function App() {
       } catch (e) {}
     }
 
-    if (respData.length === 0) {
+    if (respData.length === 0 && !isSupabaseConfigured()) {
       respData = getDemoResponses();
     }
 
@@ -1056,8 +1056,20 @@ export default function App() {
       const avg7DaysQ = totalLast7 / 7;
       const questionsDiff = todayTotal - Math.round(avg7DaysQ);
       
-      const timeTodayMinutes = Math.round(todayTotal * 1.5);
-      const avg7DaysTime = (totalLast7 * 1.5) / 7;
+      const segundosHoje = todayResponses.reduce((s: number, r: any) => s + (r.tempo_segundos || 0), 0);
+      const timeTodayMinutes = Math.round(segundosHoje / 60);
+      const inicioHoje = new Date(now);
+      inicioHoje.setHours(0, 0, 0, 0);
+      const inicio7d = new Date(inicioHoje);
+      inicio7d.setDate(inicioHoje.getDate() - 7);
+      const segundos7d = respData
+        .filter((r: any) => {
+          if (!r.created_at) return false;
+          const t = new Date(r.created_at).getTime();
+          return t >= inicio7d.getTime() && t < inicioHoje.getTime();
+        })
+        .reduce((s: number, r: any) => s + (r.tempo_segundos || 0), 0);
+      const avg7DaysTime = segundos7d / 60 / 7;
       const timeDiffMinutes = timeTodayMinutes - Math.round(avg7DaysTime);
 
       let currentStreak = 0;
@@ -1267,11 +1279,11 @@ export default function App() {
       } catch (e) {}
     }
 
-    if (!dataLoaded) {
+    if (!dataLoaded && !isSupabaseConfigured()) {
       const demoResps = getDemoResponses();
       const total = demoResps.length;
       const acertos = demoResps.filter((r: any) => r.acertou).length;
-      const aproveitamento = total > 0 ? Math.round((acertos / total) * 100) : 78;
+      const aproveitamento = total > 0 ? Math.round((acertos / total) * 100) : 0;
       setDbStats({ total, acertos, aproveitamento });
     }
 
@@ -1487,6 +1499,7 @@ export default function App() {
         } catch (err) {
           console.error("Erro ao salvar tentativa de desafio/simulado no Supabase:", err);
         }
+        await fetchUserStats();
       });
     }
   }, [roundComplete]);
