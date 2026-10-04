@@ -1103,12 +1103,12 @@ export default function App() {
         timeTodayMinutes,
         timeDiffMinutes,
         streak: currentStreak,
-        recordStreak: Math.max(maxStreak, currentStreak, 3)
+        recordStreak: Math.max(maxStreak, currentStreak)
       });
 
       const totalResp = respData.length;
       const totalAcertos = respData.filter((r: any) => r.acertou).length;
-      const acertoPct = totalResp > 0 ? Math.round((totalAcertos / totalResp) * 100) : 75;
+      const acertoPct = totalResp > 0 ? Math.round((totalAcertos / totalResp) * 100) : 0;
       
       setDbStats({
         total: totalResp,
@@ -1125,12 +1125,12 @@ export default function App() {
           activeDaysLast7++;
         }
       }
-      const consistenciaPct = Math.max(60, Math.round((activeDaysLast7 / 7) * 100));
+      const consistenciaPct = Math.round((activeDaysLast7 / 7) * 100);
 
       const sem1PctCalc = weekBuckets[1].total > 0 ? (weekBuckets[1].acertos / weekBuckets[1].total) * 100 : acertoPct;
       const sem4PctCalc = weekBuckets[4].total > 0 ? (weekBuckets[4].acertos / weekBuckets[4].total) * 100 : acertoPct;
       const evolucaoDiff = sem4PctCalc - sem1PctCalc;
-      const evolucaoPct = Math.min(100, Math.max(40, Math.round(70 + evolucaoDiff)));
+      const evolucaoPct = Math.min(100, Math.max(0, Math.round(50 + evolucaoDiff)));
 
       let daysInactive = 0;
       if (sortedDates.length > 0) {
@@ -1141,15 +1141,16 @@ export default function App() {
           daysInactive = diffDays - 1;
         }
       }
-      const streakBonus = Math.min(10, Math.max(4, currentStreak * 2));
+      const streakBonus = Math.min(10, currentStreak * 2);
       const decayPenalty = daysInactive > 0 ? Math.min(25, daysInactive * 5) : 0;
 
       const baseIndice = acertoPct * 0.4 + consistenciaPct * 0.3 + evolucaoPct * 0.3;
-      const indiceGeral = Math.max(40, Math.min(100, Math.round(baseIndice + streakBonus - decayPenalty)));
+      const indiceGeral = Math.max(0, Math.min(100, Math.round(baseIndice + streakBonus - decayPenalty)));
 
-      let badgeText = 'EM RITMO';
+      let badgeText = 'INICIAL';
       if (indiceGeral >= 80) badgeText = 'EXCELENTE';
       else if (indiceGeral >= 60) badgeText = 'NO CAMINHO';
+      else if (indiceGeral >= 40) badgeText = 'EM EVOLUÇÃO';
 
       setGerallStats({
         acerto: acertoPct,
@@ -1157,7 +1158,7 @@ export default function App() {
         evolucao: evolucaoPct,
         indice: indiceGeral,
         badge: badgeText,
-        streak: Math.max(currentStreak, 3),
+        streak: currentStreak,
         daysInactive,
         streakBonus,
         decayPenalty
