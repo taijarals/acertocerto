@@ -691,10 +691,10 @@ export default function App() {
     }
   }, [gestaoSubTab, gestaoFilter, auditoriaPage, resumoAcervo]);
 
-  // Simulado filter effect - runs only when activeTab === 'ofensivas' && ofensivasSubTab === 'desafios' && simuladoStep === 'config'
+  // Simulado filter effect - runs only when activeTab === 'ofensivas' && ofensivasSubTab === 'simulado' && simuladoStep === 'config'
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
-    if (activeTab !== 'ofensivas' || ofensivasSubTab !== 'desafios' || simuladoStep !== 'config') return;
+    if (activeTab !== 'ofensivas' || ofensivasSubTab !== 'simulado' || simuladoStep !== 'config') return;
     const sb = supabase;
     const timer = setTimeout(async () => {
       try {
