@@ -11,3 +11,6 @@
    - O tempo gasto em cada questão é medido através de `useRef` e armazenado em `tempo_segundos` (limitado a 3600s) na tabela `respostas_usuario`.
 5. **Acervo e Planos B**:
    - Quando o Supabase está configurado, o sistema utiliza exclusivamente as funções RPC (`sortear_questoes`, etc.) do banco. O fallback de demonstração (`SAMPLE_RICH_QUESTIONS`) é utilizado exclusivamente quando o Supabase não está configurado.
+6. **Otimização de Chamadas RPC**:
+   - As chamadas a `opcoes_filtro` são executadas estritamente sob demanda (visibilidade das telas de Configurações ou Simulado Config), unificando anos/disciplinas e evitando laços por matéria (`fetchTargetCounts` em chamada única).
+   - A função `resumo_acervo` é invocada exatamente uma vez no carregamento inicial (`hasLoadedResumoRef`).

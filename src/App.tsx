@@ -631,6 +631,8 @@ export default function App() {
     disciplinas: Array<{ disciplina: string; total: number; qtd_assuntos: number; bancas: string[] }>;
   } | null>(null);
 
+  const hasLoadedResumoRef = useRef(false);
+
   const recarregarResumo = async () => {
     if (isSupabaseConfigured() && supabase) {
       try {
@@ -689,8 +691,10 @@ export default function App() {
     }
   }, [gestaoSubTab, gestaoFilter, auditoriaPage, resumoAcervo]);
 
+  // Simulado filter effect - runs only when activeTab === 'ofensivas' && ofensivasSubTab === 'desafios' && simuladoStep === 'config'
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
+    if (activeTab !== 'ofensivas' || ofensivasSubTab !== 'desafios' || simuladoStep !== 'config') return;
     const sb = supabase;
     const timer = setTimeout(async () => {
       try {
@@ -709,39 +713,51 @@ export default function App() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [selectedDisciplinas, selectedAssuntos, selectedBancas, selectedAnos]);
+  }, [activeTab, ofensivasSubTab, simuladoStep, selectedDisciplinas, selectedAssuntos, selectedBancas, selectedAnos]);
 
+  // Configurações: Unified fetchAnos and fetchDisciplinas - runs only when activeTab === 'configuracoes'
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
-    async function fetchAnos() {
-      try {
-        if (!supabase) return;
-        const { data } = await supabase.rpc('opcoes_filtro', { p_disciplinas: null, p_assuntos: null, p_bancas: null, p_anos: null });
-        if (data && data.anos) setSettingsAnos(data.anos);
-      } catch (e) {}
-    }
-    fetchAnos();
-  }, []);
+    if (activeTab !== 'configuracoes') return;
 
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !supabase) return;
-    async function fetchDisciplinas() {
+    async function fetchConfigAnosEDisciplinas() {
       try {
         if (!supabase) return;
-        const { data } = await supabase.rpc('opcoes_filtro', {
+        const { data: dataDisc } = await supabase.rpc('opcoes_filtro', {
           p_disciplinas: null,
           p_assuntos: null,
           p_bancas: null,
           p_anos: anosAlvo.length > 0 ? anosAlvo : null
         });
-        if (data && data.disciplinas) setSettingsDisciplinas(data.disciplinas);
+        if (dataDisc && dataDisc.disciplinas) {
+          setSettingsDisciplinas(dataDisc.disciplinas);
+        }
+
+        if (anosAlvo.length === 0) {
+          if (dataDisc && dataDisc.anos) {
+            setSettingsAnos(dataDisc.anos);
+          }
+        } else {
+          const { data: dataAnos } = await supabase.rpc('opcoes_filtro', {
+            p_disciplinas: null,
+            p_assuntos: null,
+            p_bancas: null,
+            p_anos: null
+          });
+          if (dataAnos && dataAnos.anos) {
+            setSettingsAnos(dataAnos.anos);
+          }
+        }
       } catch (e) {}
     }
-    fetchDisciplinas();
-  }, [anosAlvo]);
+    fetchConfigAnosEDisciplinas();
+  }, [activeTab, anosAlvo]);
 
+  // Configurações: fetchAssuntos - runs only when activeTab === 'configuracoes'
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
+    if (activeTab !== 'configuracoes') return;
+
     async function fetchAssuntos() {
       if (materiasAlvo.length > 0) {
         try {
@@ -759,36 +775,48 @@ export default function App() {
       }
     }
     fetchAssuntos();
-  }, [anosAlvo, materiasAlvo]);
+  }, [activeTab, anosAlvo, materiasAlvo]);
 
+  // Contagem por matéria-alvo (fetchTargetCounts) - UMA chamada única a opcoes_filtro
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase || materiasAlvo.length === 0) return;
+    if (activeTab !== 'configuracoes' && !(activeTab === 'ofensivas' && ofensivasSubTab === 'focado')) return;
+
     let isMounted = true;
     async function fetchTargetCounts() {
-      const counts: { [key: string]: number } = {};
-      for (const materia of materiasAlvo) {
-        try {
-          if (!supabase) continue;
-          const { data } = await supabase.rpc('opcoes_filtro', {
-            p_disciplinas: [materia],
-            p_assuntos: assuntosAlvo.length > 0 ? assuntosAlvo : null,
-            p_bancas: null,
-            p_anos: anosAlvo.length > 0 ? anosAlvo : null
-          });
-          if (data) {
-            counts[materia] = data.total_disponivel;
+      try {
+        if (!supabase) return;
+        const { data } = await supabase.rpc('opcoes_filtro', {
+          p_disciplinas: null,
+          p_assuntos: assuntosAlvo.length > 0 ? assuntosAlvo : null,
+          p_bancas: null,
+          p_anos: anosAlvo.length > 0 ? anosAlvo : null
+        });
+        const counts: { [key: string]: number } = {};
+        if (data && Array.isArray(data.disciplinas)) {
+          for (const materia of materiasAlvo) {
+            const found = data.disciplinas.find((d: any) => d.valor === materia || d.disciplina === materia);
+            counts[materia] = found ? found.total : 0;
           }
-        } catch (e) {
-          counts[materia] = 0;
+        } else {
+          for (const materia of materiasAlvo) {
+            counts[materia] = 0;
+          }
         }
-      }
-      if (isMounted) {
-        setTargetedCounts(counts);
+        if (isMounted) {
+          setTargetedCounts(counts);
+        }
+      } catch (e) {
+        if (isMounted) {
+          const counts: { [key: string]: number } = {};
+          for (const materia of materiasAlvo) counts[materia] = 0;
+          setTargetedCounts(counts);
+        }
       }
     }
     fetchTargetCounts();
     return () => { isMounted = false; };
-  }, [materiasAlvo, anosAlvo, assuntosAlvo]);
+  }, [activeTab, ofensivasSubTab, materiasAlvo, anosAlvo, assuntosAlvo]);
 
   const configAvailableAnos = settingsAnos.length > 0
     ? settingsAnos.map(a => a.valor).sort().reverse()
@@ -1464,7 +1492,10 @@ export default function App() {
 
   // Supabase Schema "acertocerto" synchronization effect
   useEffect(() => {
-    recarregarResumo();
+    if (!hasLoadedResumoRef.current) {
+      hasLoadedResumoRef.current = true;
+      recarregarResumo();
+    }
   }, []);
 
   const handleTabChange = (tab: 'inicio' | 'ofensivas' | 'desempenho' | 'gestao') => {
