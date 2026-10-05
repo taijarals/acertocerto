@@ -2479,7 +2479,7 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary">library_books</span>
-                    <span>Resumo por Disciplinas & Assuntos</span>
+                    <span>Suas Matérias</span>
                   </h2>
                   <button
                     onClick={() => { setActiveTab('ofensivas'); setOfensivasSubTab('desafios'); }}
@@ -2492,36 +2492,60 @@ export default function App() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(() => {
-                    const discList = resumoAcervo?.disciplinas || [];
-                    if (discList.length === 0) {
+                    const resolvidas = desempenhoMaterias.filter((m: any) => (m.respostas || 0) > 0);
+                    if (resolvidas.length === 0) {
                       return (
                         <p className="col-span-full text-center text-xs text-on-surface-variant py-8">
-                          Nenhuma disciplina cadastrada no sistema.
+                          Você ainda não resolveu questões. Comece um desafio para ver suas estatísticas por matéria.
                         </p>
                       );
                     }
 
-                    return discList.map((d) => (
-                      <div key={d.disciplina} className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/40 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3.5">
-                          <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold">
-                            <span className="material-symbols-outlined text-[20px]">{getDisciplineIcon(d.disciplina)}</span>
+                    return resolvidas.map((m: any) => {
+                      const aprov = m.aproveitamento ?? 0;
+                      const acervo = resumoAcervo?.disciplinas?.find((d: any) => d.disciplina === m.disciplina);
+                      const corBarra = m.status === 'solido' ? 'bg-secondary'
+                        : m.status === 'em_evolucao' ? 'bg-tertiary'
+                        : m.status === 'em_atencao' ? 'bg-error'
+                        : 'bg-outline';
+                      return (
+                        <div key={m.disciplina} className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/40 space-y-3">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold shrink-0">
+                                <span className="material-symbols-outlined text-[20px]">{getDisciplineIcon(m.disciplina)}</span>
+                              </div>
+                              <div className="min-w-0">
+                                <h3 className="text-sm font-bold text-on-surface truncate">{m.disciplina}</h3>
+                                <p className="text-xs text-on-surface-variant mt-0.5">
+                                  {m.acertos} de {m.respostas} {m.respostas === 1 ? 'acerto' : 'acertos'} • {formatUltimaPratica(m.ultima_pratica)}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleStartDisciplineSimulado(m.disciplina)}
+                              className="px-3 py-1.5 rounded-lg bg-surface text-primary text-xs font-semibold hover:bg-primary hover:text-on-primary transition-all border border-outline-variant/40 shrink-0"
+                            >
+                              Desafio
+                            </button>
                           </div>
-                          <div>
-                            <h3 className="text-sm font-bold text-on-surface">{d.disciplina}</h3>
-                            <p className="text-xs text-on-surface-variant mt-0.5">
-                              {d.total} {d.total === 1 ? 'questão' : 'questões'} • {d.qtd_assuntos} {d.qtd_assuntos === 1 ? 'assunto' : 'assuntos'}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs text-on-surface-variant">
+                              <span>Aproveitamento</span>
+                              <span className="font-bold text-on-surface">{aprov}%</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+                              <div className={`h-full rounded-full ${corBarra}`} style={{ width: `${aprov}%` }}></div>
+                            </div>
+                          </div>
+                          {acervo && (
+                            <p className="text-[11px] text-outline">
+                              {m.respostas} de {acervo.total} questões do acervo resolvidas
                             </p>
-                          </div>
+                          )}
                         </div>
-                        <button
-                          onClick={() => handleStartDisciplineSimulado(d.disciplina)}
-                          className="px-3 py-1.5 rounded-lg bg-surface text-primary text-xs font-semibold hover:bg-primary hover:text-on-primary transition-all border border-outline-variant/40 shrink-0"
-                        >
-                          Desafio
-                        </button>
-                      </div>
-                    ));
+                      );
+                    });
                   })()}
                 </div>
               </div>
