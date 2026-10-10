@@ -1795,6 +1795,51 @@ export default function App() {
     setOfensivasSubTab('simulado');
   };
 
+  const handleStartRevisaoErros = async (disciplina?: string) => {
+    if (!isSupabaseConfigured() || !supabase) {
+      showNotification("Entre na sua conta para revisar seus erros.");
+      return;
+    }
+    setRoundLoading(true);
+    setRoundType('desafio');
+    let roundQuestions: Questao[] = [];
+    try {
+      const { data, error } = await supabase.rpc('sortear_erros', {
+        p_disciplinas: disciplina ? [disciplina] : null,
+        p_limite: 5
+      });
+      if (error) {
+        console.error('[Supabase] sortear_erros:', error);
+        showNotification("Não foi possível carregar seus erros. Tente novamente.");
+        setRoundLoading(false);
+        return;
+      }
+      roundQuestions = Array.isArray(data) ? data.map(mapearQuestao) : [];
+    } catch (error) {
+      console.error('[Supabase] sortear_erros:', error);
+      showNotification("Não foi possível carregar seus erros. Tente novamente.");
+      setRoundLoading(false);
+      return;
+    }
+    setRoundLoading(false);
+    if (roundQuestions.length === 0) {
+      showNotification(disciplina ? `Nenhum erro pendente em ${disciplina}. 🎉` : "Nenhum erro pendente para revisar. 🎉");
+      return;
+    }
+    questionStartTimestampRef.current = Date.now();
+    setActiveRoundQuestions(roundQuestions);
+    setAnswers(new Array(roundQuestions.length).fill(null));
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setAnsweredState(false);
+    setTimerSeconds(0);
+    setRoundComplete(false);
+    setSimuladoStep('quiz');
+    showNotification(`Revisão iniciada com ${roundQuestions.length} questões que você errou!`);
+    setActiveTab('ofensivas');
+    setOfensivasSubTab('simulado');
+  };
+
   const handleStartFocadoRound = async (discipline?: string) => {
     setRoundLoading(true);
     setRoundType('desafio');
@@ -2608,6 +2653,15 @@ export default function App() {
                           <span className="material-symbols-outlined text-[18px]">electric_bolt</span>
                           <span>Desafio Misto (5Q)</span>
                         </button>
+                        {(habitosEstudo?.recuperacao?.pendentes_revisao || 0) > 0 && (
+                          <button
+                            onClick={() => handleStartRevisaoErros()}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-error-container text-error text-xs sm:text-sm font-semibold active:scale-95 shadow-sm transition-all whitespace-nowrap self-start sm:self-auto"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">replay</span>
+                            <span>Revisar erros ({habitosEstudo.recuperacao.pendentes_revisao})</span>
+                          </button>
+                        )}
                       </div>
 
                       {/* Disciplines Grid */}
@@ -3786,6 +3840,27 @@ export default function App() {
                               </>
                             );
                           })()}
+                          {(habitosEstudo?.recuperacao?.pendentes_revisao || 0) > 0 && (
+                            <div className="pt-3 space-y-2">
+                              <button
+                                onClick={() => handleStartRevisaoErros()}
+                                className="px-4 py-2 rounded-lg bg-secondary text-on-secondary text-xs font-bold"
+                              >
+                                Revisar {habitosEstudo.recuperacao.pendentes_revisao} erros pendentes
+                              </button>
+                              <div className="flex flex-wrap justify-center gap-1.5">
+                                {(habitosEstudo.recuperacao.pendentes_por_materia || []).slice(0, 5).map((p: any) => (
+                                  <button
+                                    key={p.disciplina}
+                                    onClick={() => handleStartRevisaoErros(p.disciplina)}
+                                    className="px-2 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] font-semibold hover:bg-primary hover:text-on-primary"
+                                  >
+                                    {p.disciplina} ({p.pendentes})
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
