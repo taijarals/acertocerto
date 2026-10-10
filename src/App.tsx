@@ -862,6 +862,14 @@ export default function App() {
 
   // Supabase Auth States
   const [session, setSession] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase || !session?.user) { setIsAdmin(false); return; }
+    supabase.rpc('is_admin').then(({ data, error }) => {
+      if (error) { console.error('[Supabase] is_admin:', error); setIsAdmin(false); return; }
+      setIsAdmin(data === true);
+    });
+  }, [session]);
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -2284,17 +2292,19 @@ export default function App() {
               <span>Desempenho</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('gestao')}
-              className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
-                activeTab === 'gestao'
-                  ? 'text-primary font-bold border-b-2 border-primary'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-              <span>Gestão</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('gestao')}
+                className={`pb-1 font-label-md text-label-md transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'gestao'
+                    ? 'text-primary font-bold border-b-2 border-primary'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                <span>Gestão</span>
+              </button>
+            )}
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -2374,17 +2384,19 @@ export default function App() {
                 <span>Desempenho</span>
               </button>
 
-              <button
-                onClick={() => { setActiveTab('gestao'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
-                  activeTab === 'gestao'
-                    ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
-                    : 'text-on-surface-variant hover:bg-surface-container-high'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
-                <span>Gestão</span>
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => { setActiveTab('gestao'); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
+                    activeTab === 'gestao'
+                      ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
+                      : 'text-on-surface-variant hover:bg-surface-container-high'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+                  <span>Gestão</span>
+                </button>
+              )}
               <button
                 onClick={() => { setActiveTab('configuracoes'); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md text-left transition-all ${
@@ -3911,7 +3923,7 @@ export default function App() {
           )}
 
           {/* ================= TAB: GESTÃO & IMPORTAÇÃO ================= */}
-          {activeTab === 'gestao' && (
+          {activeTab === 'gestao' && isAdmin && (
             <section className="space-y-6">
               {/* Top Segmented Sub-Tabs Bar (Auditoria | Importação de JSON) */}
               <div className="bg-primary p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
@@ -4607,15 +4619,17 @@ export default function App() {
           <span className="material-symbols-outlined text-[20px]">insights</span>
           <span className="text-label-sm font-label-sm">Desempenho</span>
         </button>
-        <button
-          onClick={() => setActiveTab('gestao')}
-          className={`flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all ${
-            activeTab === 'gestao' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
-          <span className="text-label-sm font-label-sm">Gestão</span>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('gestao')}
+            className={`flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all ${
+              activeTab === 'gestao' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-surface-variant'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+            <span className="text-label-sm font-label-sm">Gestão</span>
+          </button>
+        )}
       </nav>
 
       {/* ================= SCHEMA MODAL ================= */}
