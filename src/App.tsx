@@ -929,11 +929,11 @@ export default function App() {
       { day: 'Dom', vol: 0, pct: 0 },
     ],
     weekly: [
-      { label: 'Sem 1', pct: 0 },
-      { label: 'Sem 2', pct: 0 },
-      { label: 'Sem 3', pct: 0 },
-      { label: 'Sem 4', pct: 0 },
-      { label: 'Atual', pct: 0 },
+      { label: '3 sem. atrás', pct: 0 },
+      { label: '2 sem. atrás', pct: 0 },
+      { label: 'Sem. passada', pct: 0 },
+      { label: 'Esta semana', pct: 0 },
+      { label: 'Hoje', pct: 0 },
     ]
   });
 
@@ -1029,10 +1029,10 @@ export default function App() {
       const atualPct = todayTotal > 0 ? Math.round((todayAcertos / todayTotal) * 100) : 0;
 
       const weekly = [
-        { label: 'Sem 1', pct: sem1Pct },
-        { label: 'Sem 2', pct: sem2Pct },
-        { label: 'Sem 3', pct: sem3Pct },
-        { label: 'Sem 4', pct: sem4Pct },
+        { label: '3 sem. atrás', pct: sem1Pct },
+        { label: '2 sem. atrás', pct: sem2Pct },
+        { label: 'Sem. passada', pct: sem3Pct },
+        { label: 'Esta semana', pct: sem4Pct },
         { label: 'Hoje', pct: atualPct },
       ];
 
@@ -3886,7 +3886,8 @@ export default function App() {
                             const tooltipStr = `${formatDateRange(sem.inicio, sem.fim)} — ${sem.respostas || 0} resp. · ${sem.aproveitamento ?? 0}%`;
                             return (
                               <div key={idx} title={tooltipStr} className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-1 cursor-pointer">
-                                <span className="text-[11px] font-bold text-outline">{sem.rotulo || `Sem ${idx + 1}`}</span>
+                                <span className="block text-[11px] font-bold text-outline leading-tight">{sem.rotulo || `Sem ${idx + 1}`}</span>
+                                {sem.periodo && <span className="block text-[9px] text-outline/80">{sem.periodo}</span>}
                                 <div className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center text-xs font-bold ${circleBg}`}>
                                   {circleContent}
                                 </div>
