@@ -941,15 +941,21 @@ export default function App() {
     let respData: any[] = [];
     if (isSupabaseConfigured() && supabase) {
       try {
-        const sb = supabase;
-        const { data } = await sb
-          .from('respostas_usuario')
-          .select('acertou, created_at, tempo_segundos')
-          .order('created_at', { ascending: true });
-        if (data && data.length > 0) {
-          respData = data;
+        const { data, error } = await supabase.rpc('painel_desempenho');
+        if (error) {
+          console.error('[Supabase] painel_desempenho:', error);
+          return;
         }
-      } catch (e) {}
+        if (data) {
+          setDbStats(data.db_stats);
+          setTodayStats(data.today_stats);
+          setGerallStats(data.geral_stats);
+          setPerformanceHistory(data.historico);
+        }
+      } catch (e) {
+        console.error('[Supabase] painel_desempenho:', e);
+      }
+      return;
     }
 
     if (respData.length === 0 && !isSupabaseConfigured()) {
@@ -1265,17 +1271,7 @@ export default function App() {
     let dataLoaded = false;
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('respostas_usuario')
-          .select('acertou');
-
-        if (!error && data && data.length > 0) {
-          const total = data.length;
-          const acertos = data.filter((r: any) => r.acertou).length;
-          const aproveitamento = total > 0 ? Math.round((acertos / total) * 100) : 0;
-          setDbStats({ total, acertos, aproveitamento });
-          dataLoaded = true;
-        }
+        dataLoaded = true;
       } catch (e) {}
     }
 
