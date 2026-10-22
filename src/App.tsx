@@ -279,11 +279,26 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'inicio' | 'ofensivas' | 'desempenho' | 'gestao' | 'configuracoes'>('inicio');
   const [ofensivasSubTab, setOfensivasSubTab] = useState<'desafios' | 'simulado' | 'focado'>('desafios');
   const [desempenhoSubTab, setDesempenhoSubTab] = useState<'geral' | 'materias' | 'habitos'>('geral');
-  const [gestaoSubTab, setGestaoSubTab] = useState<'auditoria' | 'importacao'>('auditoria');
+  const [gestaoSubTab, setGestaoSubTab] = useState<'alunos' | 'criticas' | 'auditoria' | 'importacao'>('alunos');
   const [gestaoFilter, setGestaoFilter] = useState<'all' | 'pendentes' | 'completas'>('all');
   const [clearDbModalOpen, setClearDbModalOpen] = useState<boolean>(false);
   const [badgesModalOpen, setBadgesModalOpen] = useState<boolean>(false);
   const [userInitials, setUserInitials] = useState<string>('AC');
+
+  // Admin Panel States
+  const [adminVisaoGeral, setAdminVisaoGeral] = useState<any>(null);
+  const [adminAlunos, setAdminAlunos] = useState<any[]>([]);
+  const [adminCriticas, setAdminCriticas] = useState<any[]>([]);
+  const [adminLoading, setAdminLoading] = useState<boolean>(false);
+  const [adminSearch, setAdminSearch] = useState<string>('');
+  const [adminSortField, setAdminSortField] = useState<string>('respostas_total');
+  const [adminSortAsc, setAdminSortAsc] = useState<boolean>(false);
+  const [selectedAlunoId, setSelectedAlunoId] = useState<string | null>(null);
+  const [alunoDetalhe, setAlunoDetalhe] = useState<any>(null);
+  const [alunoDetalheLoading, setAlunoDetalheLoading] = useState<boolean>(false);
+  const [questionModalQ, setQuestionModalQ] = useState<Questao | null>(null);
+
+
 
   useEffect(() => {
     safeLocalStorage.removeItem('acertocerto_demo_respostas');
@@ -847,6 +862,127 @@ export default function App() {
       setIsAdmin(data === true);
     });
   }, [session]);
+
+  const fetchAdminAlunosData = async () => {
+    if (!isSupabaseConfigured() || !supabase) return;
+    setAdminLoading(true);
+    try {
+      const [resVisao, resAlunos] = await Promise.all([
+        supabase.rpc('admin_visao_geral'),
+        supabase.rpc('admin_alunos')
+      ]);
+      if (resVisao.error) {
+        console.error('[Supabase] admin_visao_geral:', resVisao.error);
+        showNotification("Erro ao carregar visão geral do admin.");
+      } else if (resVisao.data) {
+        setAdminVisaoGeral(resVisao.data);
+      }
+      if (resAlunos.error) {
+        console.error('[Supabase] admin_alunos:', resAlunos.error);
+        showNotification("Erro ao carregar lista de alunos.");
+      } else if (resAlunos.data) {
+        setAdminAlunos(resAlunos.data);
+      }
+    } catch (error) {
+      console.error('[Supabase] admin_alunos/visao:', error);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const fetchAdminCriticasData = async () => {
+    if (!isSupabaseConfigured() || !supabase) return;
+    setAdminLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('admin_questoes_criticas', {
+        p_min_respostas: 3,
+        p_limite: 50
+      });
+      if (error) {
+        console.error('[Supabase] admin_questoes_criticas:', error);
+        showNotification("Erro ao carregar questões críticas.");
+      } else if (data) {
+        setAdminCriticas(data);
+      }
+    } catch (error) {
+      console.error('[Supabase] admin_questoes_criticas:', error);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const fetchAlunoDetalheData = async (userId: string) => {
+    if (!isSupabaseConfigured() || !supabase) return;
+    setAlunoDetalheLoading(true);
+    setSelectedAlunoId(userId);
+    try {
+      const { data, error } = await supabase.rpc('admin_aluno_detalhe', {
+        p_user_id: userId
+      });
+      if (error) {
+        console.error('[Supabase] admin_aluno_detalhe:', error);
+        showNotification("Erro ao carregar detalhes do aluno.");
+      } else if (data) {
+        setAlunoDetalhe(data);
+      }
+    } catch (error) {
+      console.error('[Supabase] admin_aluno_detalhe:', error);
+    } finally {
+      setAlunoDetalheLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'gestao' && isAdmin) {
+      if (gestaoSubTab === 'alunos') {
+        fetchAdminAlunosData();
+      } else if (gestaoSubTab === 'criticas') {
+        fetchAdminCriticasData();
+      }
+    }
+  }, [activeTab, gestaoSubTab, isAdmin]);
+
+  const filteredAlunos = adminAlunos.filter(a => {
+    if (!adminSearch) return true;
+    return (a.email || '').toLowerCase().includes(adminSearch.toLowerCase());
+  }).sort((a, b) => {
+    let valA = a[adminSortField];
+    let valB = b[adminSortField];
+    if (valA === null || valA === undefined) valA = '';
+    if (valB === null || valB === undefined) valB = '';
+    if (typeof valA === 'string') {
+      const cmp = valA.localeCompare(valB);
+      return adminSortAsc ? cmp : -cmp;
+    } else {
+      return adminSortAsc ? valA - valB : valB - valA;
+    }
+  });
+
+  const handleSortAlunos = (field: string) => {
+    if (adminSortField === field) {
+      setAdminSortAsc(!adminSortAsc);
+    } else {
+      setAdminSortField(field);
+      setAdminSortAsc(false);
+    }
+  };
+
+  const formatDateTimeSaoPaulo = (isoString: string | null) => {
+    if (!isoString) return '—';
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return isoString;
+    }
+  };
 
 
   const [uploadFeedback, setUploadFeedback] = useState<{ filename: string; count: number } | null>(null);
@@ -4067,203 +4203,540 @@ export default function App() {
             </section>
           )}
 
-          {/* ================= TAB: GESTÃO & IMPORTAÇÃO ================= */}
+          {/* ================= TAB: GESTÃO ================= */}
           {activeTab === 'gestao' && isAdmin && (
             <section className="space-y-6">
-              {/* Top Segmented Sub-Tabs Bar (Auditoria | Importação de JSON) */}
-              <div className="bg-primary p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
+              {/* Top Segmented Sub-Tabs Bar (Alunos | Questões críticas | Auditoria | Importação) */}
+              <div className="bg-primary p-2 rounded-2xl shadow-md flex flex-wrap items-center justify-center gap-1.5 max-w-2xl mx-auto">
+                <button
+                  onClick={() => setGestaoSubTab('alunos')}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    gestaoSubTab === 'alunos'
+                      ? 'bg-white text-primary shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Alunos
+                </button>
+                <button
+                  onClick={() => setGestaoSubTab('criticas')}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    gestaoSubTab === 'criticas'
+                      ? 'bg-white text-primary shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Questões críticas
+                </button>
                 <button
                   onClick={() => setGestaoSubTab('auditoria')}
-                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     gestaoSubTab === 'auditoria'
                       ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  Auditoria de Questões
+                  Auditoria
                 </button>
                 <button
                   onClick={() => setGestaoSubTab('importacao')}
-                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     gestaoSubTab === 'importacao'
                       ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  Importação de JSON
+                  Importação
                 </button>
               </div>
+
+              {gestaoSubTab === 'alunos' && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="font-headline-sm text-headline-sm font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">group</span>
+                        <span>Gestão de Alunos</span>
+                      </h1>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant">Acompanhe métricas gerais de engajamento, atividade recente e desempenho dos alunos.</p>
+                    </div>
+                    <button
+                      onClick={fetchAdminAlunosData}
+                      className="px-4 py-2 rounded-xl bg-surface-container text-on-surface font-bold text-xs hover:bg-surface-container-high flex items-center gap-2 shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">refresh</span>
+                      <span>Atualizar</span>
+                    </button>
+                  </div>
+
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                      <p className="text-xs font-semibold text-on-surface-variant">Cadastrados</p>
+                      <p className="text-2xl font-bold text-primary mt-1">{adminVisaoGeral?.usuarios_cadastrados || 0}</p>
+                      <p className="text-xs text-on-surface-variant mt-1">Total de contas</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                      <p className="text-xs font-semibold text-on-surface-variant">Ativos Hoje</p>
+                      <p className="text-2xl font-bold text-secondary mt-1">{adminVisaoGeral?.ativos_hoje || 0}</p>
+                      <p className="text-xs text-on-surface-variant mt-1">Usuários hoje</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                      <p className="text-xs font-semibold text-on-surface-variant">Ativos (7 dias)</p>
+                      <p className="text-2xl font-bold text-primary mt-1">{adminVisaoGeral?.ativos_7d || 0}</p>
+                      <p className="text-xs text-on-surface-variant mt-1">Na última semana</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                      <p className="text-xs font-semibold text-on-surface-variant">Respostas (7d)</p>
+                      <p className="text-2xl font-bold text-tertiary mt-1">{adminVisaoGeral?.respostas_7d || 0}</p>
+                      <p className="text-xs text-on-surface-variant mt-1">Questões resolvidas</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 col-span-2 md:col-span-1">
+                      <p className="text-xs font-semibold text-on-surface-variant">Aproveitamento Geral</p>
+                      <p className="text-2xl font-bold text-secondary mt-1">
+                        {adminVisaoGeral?.aproveitamento_geral !== undefined && adminVisaoGeral?.aproveitamento_geral !== null ? `${adminVisaoGeral.aproveitamento_geral}%` : '—'}
+                      </p>
+                      <p className="text-xs text-on-surface-variant mt-1">Média do acervo</p>
+                    </div>
+                  </div>
+
+                  {/* 30 Days Bar Chart */}
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                    <div>
+                      <h3 className="font-title-md font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">bar_chart</span>
+                        <span>Respostas nos Últimos 30 Dias</span>
+                      </h3>
+                      <p className="text-xs text-on-surface-variant">Volume diário de questões respondidas na plataforma</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                      <div className="flex items-end justify-between h-44 gap-1 sm:gap-2 pt-6 px-2 overflow-x-auto">
+                        {adminVisaoGeral?.serie_30d && adminVisaoGeral.serie_30d.length > 0 ? (
+                          adminVisaoGeral.serie_30d.map((item: any, idx: number) => {
+                            const resp = item.respostas || 0;
+                            const usrs = item.usuarios || 0;
+                            const barHeight = Math.max(resp * 3, resp > 0 ? 20 : 8);
+                            const diaFmt = item.dia ? item.dia.split('-').reverse().slice(0, 2).join('/') : '';
+                            return (
+                              <div key={idx} className="flex-1 min-w-[20px] flex flex-col items-center gap-1.5 h-full justify-end group relative" title={`Dia ${diaFmt}: ${resp} respostas · ${usrs} usuários ativos`}>
+                                <div className="w-full bg-primary/30 group-hover:bg-primary rounded-t-lg transition-all flex items-center justify-center pb-1 text-[9px] font-bold text-primary group-hover:text-on-primary" style={{ height: `${barHeight}px` }}>
+                                  {resp > 0 ? resp : ''}
+                                </div>
+                                <span className="text-[9px] text-on-surface-variant truncate w-full text-center">{diaFmt}</span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-outline italic py-10 text-center w-full">Nenhum dado de atividade nos últimos 30 dias</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Search & Students Table / Cards */}
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-title-md font-bold text-on-surface">Lista de Alunos Cadastrados</h3>
+                        <p className="text-xs text-on-surface-variant">{adminAlunos.length} aluno(s) registrado(s)</p>
+                      </div>
+                      <div className="relative max-w-xs w-full">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-outline">
+                          <span className="material-symbols-outlined text-[18px]">search</span>
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Buscar por e-mail..."
+                          value={adminSearch}
+                          onChange={(e) => setAdminSearch(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 text-xs text-on-surface focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+
+                    {adminLoading ? (
+                      <div className="p-12 text-center text-on-surface-variant">Carregando alunos...</div>
+                    ) : filteredAlunos.length === 0 ? (
+                      <div className="p-12 text-center text-outline italic">Nenhum aluno encontrado.</div>
+                    ) : (
+                      <>
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-outline-variant/40 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                                <th className="py-3 px-3 cursor-pointer hover:text-primary" onClick={() => handleSortAlunos('email')}>Aluno</th>
+                                <th className="py-3 px-3 cursor-pointer hover:text-primary" onClick={() => handleSortAlunos('ultima_atividade')}>Última Atividade</th>
+                                <th className="py-3 px-3 cursor-pointer hover:text-primary text-right" onClick={() => handleSortAlunos('respostas_total')}>Respostas</th>
+                                <th className="py-3 px-3 cursor-pointer hover:text-primary text-right" onClick={() => handleSortAlunos('aproveitamento')}>Aproveitamento</th>
+                                <th className="py-3 px-3 cursor-pointer hover:text-primary text-right" onClick={() => handleSortAlunos('tempo_medio_seg')}>Tempo Médio</th>
+                                <th className="py-3 px-3 text-center">Sim./Desaf.</th>
+                                <th className="py-3 px-3 text-center">Marcações</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-outline-variant/20 text-xs">
+                              {filteredAlunos.map((aluno) => {
+                                const diasSem = aluno.dias_sem_estudar ?? 0;
+                                const alertaInativo = diasSem >= 7;
+                                return (
+                                  <tr
+                                    key={aluno.user_id}
+                                    onClick={() => fetchAlunoDetalheData(aluno.user_id)}
+                                    className={`cursor-pointer transition-colors hover:bg-surface-container-low/80 ${alertaInativo ? 'border-l-4 border-l-error bg-error-container/5' : ''}`}
+                                  >
+                                    <td className="py-3.5 px-3">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-on-surface">{aluno.email}</span>
+                                        {aluno.is_admin && (
+                                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed">admin</span>
+                                        )}
+                                      </div>
+                                      <span className="text-[10px] text-outline">Cadastrado em {formatUltimaPratica(aluno.cadastrado_em)}</span>
+                                    </td>
+                                    <td className="py-3.5 px-3">
+                                      <span className={`font-semibold ${alertaInativo ? 'text-error' : 'text-on-surface'}`}>
+                                        {formatUltimaPratica(aluno.ultima_atividade)}
+                                      </span>
+                                      {diasSem >= 7 && <span className="block text-[10px] text-error">Inativo há {diasSem} dias</span>}
+                                    </td>
+                                    <td className="py-3.5 px-3 text-right font-bold text-primary">
+                                      {aluno.respostas_total || 0}
+                                      <span className="block text-[10px] text-secondary font-normal">+{aluno.respostas_7d || 0} na semana</span>
+                                    </td>
+                                    <td className="py-3.5 px-3 text-right font-bold text-on-surface">
+                                      {aluno.aproveitamento !== null && aluno.aproveitamento !== undefined ? `${aluno.aproveitamento}%` : '—'}
+                                    </td>
+                                    <td className="py-3.5 px-3 text-right text-on-surface-variant">
+                                      {formatTempoMedio(aluno.tempo_medio_seg)}
+                                    </td>
+                                    <td className="py-3.5 px-3 text-center text-on-surface-variant">
+                                      {aluno.simulados_concluidos || 0} / {aluno.desafios_concluidos || 0}
+                                    </td>
+                                    <td className="py-3.5 px-3 text-center text-on-surface-variant font-semibold">
+                                      {aluno.marcacoes || 0}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobile Cards List */}
+                        <div className="md:hidden space-y-3">
+                          {filteredAlunos.map((aluno) => {
+                            const diasSem = aluno.dias_sem_estudar ?? 0;
+                            const alertaInativo = diasSem >= 7;
+                            return (
+                              <div
+                                key={aluno.user_id}
+                                onClick={() => fetchAlunoDetalheData(aluno.user_id)}
+                                className={`p-4 rounded-xl border bg-surface-container-low space-y-2 cursor-pointer ${alertaInativo ? 'border-l-4 border-l-error border-error/30' : 'border-outline-variant/30'}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-sm text-on-surface truncate">{aluno.email}</span>
+                                  {aluno.is_admin && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed">admin</span>}
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-outline-variant/20">
+                                  <div>
+                                    <span className="text-outline">Última atividade:</span>{' '}
+                                    <span className={`font-semibold ${alertaInativo ? 'text-error' : 'text-on-surface'}`}>{formatUltimaPratica(aluno.ultima_atividade)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-outline">Respostas:</span> <span className="font-bold text-primary">{aluno.respostas_total || 0}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-outline">Aproveitamento:</span> <span className="font-bold">{aluno.aproveitamento !== null ? `${aluno.aproveitamento}%` : '—'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-outline">Tempo médio:</span> <span>{formatTempoMedio(aluno.tempo_medio_seg)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {gestaoSubTab === 'criticas' && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="font-headline-sm text-headline-sm font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-error">warning</span>
+                        <span>Questões Críticas</span>
+                      </h1>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant">Questões com alta taxa de erro ou alta incidência de marcações de suspeita de erro. Útil para identificar questões com gabarito incorreto, ambíguas ou desatualizadas.</p>
+                    </div>
+                    <button
+                      onClick={fetchAdminCriticasData}
+                      className="px-4 py-2 rounded-xl bg-surface-container text-on-surface font-bold text-xs hover:bg-surface-container-high flex items-center gap-2 shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">refresh</span>
+                      <span>Atualizar</span>
+                    </button>
+                  </div>
+
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-title-md font-bold text-on-surface">Acervo Crítico ({adminCriticas.length})</h3>
+                      <span className="text-xs text-on-surface-variant">Mínimo de 3 respostas</span>
+                    </div>
+
+                    {adminLoading ? (
+                      <div className="p-12 text-center text-on-surface-variant">Carregando questões críticas...</div>
+                    ) : adminCriticas.length === 0 ? (
+                      <div className="p-12 text-center bg-surface-container-low rounded-xl border border-outline-variant/30 space-y-2">
+                        <span className="material-symbols-outlined text-[40px] text-secondary">check_circle</span>
+                        <h4 className="font-bold text-on-surface">Nenhuma questão crítica encontrada</h4>
+                        <p className="text-xs text-on-surface-variant">As questões da base estão com taxas de acerto normais e sem suspeitas expressivas.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {adminCriticas.map((q) => {
+                          const taxaErro = q.taxa_erro ?? 0;
+                          const isHighError = taxaErro >= 70;
+                          return (
+                            <div key={q.questao_id} className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                              <div className="space-y-1.5 min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="px-2 py-0.5 rounded text-[11px] font-code-md bg-surface-container text-on-surface font-bold">
+                                    {q.questao_id}
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-primary-fixed/40 text-on-primary-fixed font-semibold">
+                                    {q.disciplina || 'Geral'}
+                                  </span>
+                                  {q.banca && (
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-surface-container text-on-surface-variant">
+                                      {q.banca} {q.ano ? `(${q.ano})` : ''}
+                                    </span>
+                                  )}
+                                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${isHighError ? 'bg-error-container text-error' : 'bg-surface-container text-on-surface-variant'}`}>
+                                    Taxa de erro: {taxaErro}%
+                                  </span>
+                                  {q.suspeitas_erro > 0 && (
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-tertiary-container text-on-tertiary-container">
+                                      {q.suspeitas_erro} suspeita(s) de erro
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-on-surface-variant">
+                                  Respostas totais: <strong className="text-on-surface">{q.respostas}</strong> | Gabarito: <strong className="text-secondary">{q.alternativa_certa}</strong> | Mais marcada: <strong className="text-error">{q.alternativa_mais_marcada || '—'}</strong>
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <button
+                                  onClick={() => {
+                                    const fullQ: Questao = {
+                                      id: q.questao_id,
+                                      disciplina: q.disciplina,
+                                      assunto: q.assunto,
+                                      ano: q.ano,
+                                      banca: q.banca,
+                                      prova: null,
+                                      tipo: 'multipla_escolha',
+                                      enunciado: `[Questão Crítica] Assunto: ${q.assunto || 'N/D'}`,
+                                      alternativas: [
+                                        { letra: 'A', texto: 'Alternativa A' },
+                                        { letra: 'B', texto: 'Alternativa B' },
+                                        { letra: 'C', texto: 'Alternativa C' },
+                                        { letra: 'D', texto: 'Alternativa D' },
+                                        { letra: 'E', texto: 'Alternativa E' }
+                                      ],
+                                      alternativa_certa: q.alternativa_certa || 'A',
+                                      pagina: 1
+                                    };
+                                    setQuestionModalQ(fullQ);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary-container shadow-sm flex items-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                  <span>Ver Questão</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {gestaoSubTab === 'auditoria' && (
                 <div className="space-y-6 animate-fadeIn">
                   <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/40 shadow-sm space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h1 className="font-headline-sm text-headline-sm font-bold text-on-surface flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary">admin_panel_settings</span>
-                      <span>Gestão & Auditoria de Questões</span>
-                    </h1>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">Monitore pendências de preenchimento, audite o banco de dados e gerencie registros.</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setClearDbModalOpen(true)}
-                      className="px-4 py-2 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md hover:opacity-90 flex items-center gap-2 shadow-sm"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete_forever</span>
-                      <span>Deletar Toda a Base</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                    <p className="text-xs font-semibold text-on-surface-variant">Total no Sistema</p>
-                    <p className="text-2xl font-bold text-primary mt-1">{resumoAcervo?.total || 0}</p>
-                    <p className="text-xs text-on-surface-variant mt-1">Questões cadastradas</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                    <p className="text-xs font-semibold text-on-surface-variant">Com Pendências de Ajustes</p>
-                    <p className="text-2xl font-bold text-error mt-1">
-                      {resumoAcervo?.pendentes || 0}
-                    </p>
-                    <p className="text-xs text-error mt-1">Requerem atenção</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                    <p className="text-xs font-semibold text-on-surface-variant">Questões Completas</p>
-                    <p className="text-2xl font-bold text-secondary mt-1">
-                      {resumoAcervo?.validadas || 0}
-                    </p>
-                    <p className="text-xs text-secondary mt-1">Prontas para simulado</p>
-                  </div>
-                </div>
-
-                {/* Filter bar */}
-                <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/30">
-                  <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mr-2">Filtrar:</span>
-                  <button
-                    onClick={() => { setGestaoFilter('all'); setAuditoriaPage(0); }}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-label-md transition-all ${
-                      gestaoFilter === 'all' ? 'bg-primary text-on-primary font-bold' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                    }`}
-                  >
-                    Todas ({resumoAcervo?.total || 0})
-                  </button>
-                  <button
-                    onClick={() => { setGestaoFilter('pendentes'); setAuditoriaPage(0); }}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-label-md transition-all ${
-                      gestaoFilter === 'pendentes' ? 'bg-error text-on-error font-bold' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                    }`}
-                  >
-                    Com Pendências ({resumoAcervo?.pendentes || 0})
-                  </button>
-                  <button
-                    onClick={() => { setGestaoFilter('completas'); setAuditoriaPage(0); }}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-label-md transition-all ${
-                      gestaoFilter === 'completas' ? 'bg-secondary text-on-secondary font-bold' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                    }`}
-                  >
-                    Completas ({resumoAcervo?.validadas || 0})
-                  </button>
-                </div>
-
-                {/* Questions List */}
-                <div className="space-y-3 pt-2">
-                  {auditoriaLoading ? (
-                    <div className="p-12 text-center text-on-surface-variant">Carregando auditoria...</div>
-                  ) : auditoriaItems.length === 0 ? (
-                    <div className="p-12 text-center bg-surface-container-low rounded-xl border border-outline-variant/30 space-y-3">
-                      <span className="material-symbols-outlined text-[48px] text-outline">database</span>
-                      <h3 className="font-title-md font-bold text-on-surface">Base de dados vazia</h3>
-                      <p className="text-body-sm text-on-surface-variant max-w-sm mx-auto">
-                        Nenhuma questão cadastrada para este filtro.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      {auditoriaItems.map((q) => {
-                        const issues = q.pendencias || [];
-                        return (
-                          <div key={q.id} className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="space-y-1.5 min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="px-2 py-0.5 rounded text-[11px] font-code-md bg-surface-container text-on-surface font-bold">
-                                  {q.id}
-                                </span>
-                                <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-primary-fixed/40 text-on-primary-fixed font-semibold">
-                                  {q.disciplina || 'Sem Disciplina'}
-                                </span>
-                                {q.banca && (
-                                  <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-surface-container text-on-surface-variant">
-                                    {q.banca} {q.ano ? `(${q.ano})` : ''}
-                                  </span>
-                                )}
-                                {issues.length > 0 ? (
-                                  <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-error-container text-on-error-container font-semibold flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">warning</span>
-                                    <span>{issues.length} {issues.length === 1 ? 'pendência' : 'pendências'}</span>
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-secondary-fixed text-on-secondary-fixed font-semibold flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                                    <span>Completa</span>
-                                  </span>
-                                )}
-                              </div>
-                              <p className="font-body-md text-sm text-on-surface line-clamp-2">
-                                {q.enunciado_resumo || q.enunciado || '(Sem enunciado)'}
-                              </p>
-                              {issues.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 pt-1">
-                                  {issues.map((iss: string, i: number) => (
-                                    <span key={i} className="text-[10px] font-code-md text-error bg-error-container/40 px-1.5 py-0.5 rounded">
-                                      • {iss}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <button
-                                onClick={() => handleDeleteQuestion(q.id)}
-                                className="p-2 rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error transition-colors"
-                                title="Excluir questão"
-                              >
-                                <span className="material-symbols-outlined text-[20px]">delete</span>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Pagination Controls */}
-                      <div className="flex items-center justify-between pt-4 border-t border-outline-variant/30">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <h1 className="font-headline-sm text-headline-sm font-bold text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary">admin_panel_settings</span>
+                          <span>Gestão & Auditoria de Questões</span>
+                        </h1>
+                        <p className="font-body-sm text-body-sm text-on-surface-variant">Monitore pendências de preenchimento, audite o banco de dados e gerencie registros.</p>
+                      </div>
+                      <div className="flex items-center gap-3">
                         <button
-                          onClick={() => setAuditoriaPage(p => Math.max(0, p - 1))}
-                          disabled={auditoriaPage === 0}
-                          className="px-3.5 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-xs disabled:opacity-50 hover:bg-surface-container-high transition-colors"
+                          onClick={() => setClearDbModalOpen(true)}
+                          className="px-4 py-2 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md hover:opacity-90 flex items-center gap-2 shadow-sm"
                         >
-                          Anterior
-                        </button>
-                        <span className="text-xs text-on-surface-variant font-medium">
-                          Página {auditoriaPage + 1} de {Math.ceil((gestaoFilter === 'pendentes' ? (resumoAcervo?.pendentes || 0) : gestaoFilter === 'completas' ? (resumoAcervo?.validadas || 0) : (resumoAcervo?.total || 0)) / 50) || 1}
-                        </span>
-                        <button
-                          onClick={() => setAuditoriaPage(p => p + 1)}
-                          disabled={(auditoriaPage + 1) * 50 >= (gestaoFilter === 'pendentes' ? (resumoAcervo?.pendentes || 0) : gestaoFilter === 'completas' ? (resumoAcervo?.validadas || 0) : (resumoAcervo?.total || 0))}
-                          className="px-3.5 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-xs disabled:opacity-50 hover:bg-surface-container-high transition-colors"
-                        >
-                          Próxima
+                          <span className="material-symbols-outlined text-[18px]">delete_forever</span>
+                          <span>Deletar Toda a Base</span>
                         </button>
                       </div>
-                    </>
-                  )}
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                        <p className="text-xs font-semibold text-on-surface-variant">Total no Sistema</p>
+                        <p className="text-2xl font-bold text-primary mt-1">{resumoAcervo?.total || 0}</p>
+                        <p className="text-xs text-on-surface-variant mt-1">Questões cadastradas</p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                        <p className="text-xs font-semibold text-on-surface-variant">Com Pendências de Ajustes</p>
+                        <p className="text-2xl font-bold text-error mt-1">
+                          {resumoAcervo?.pendentes || 0}
+                        </p>
+                        <p className="text-xs text-error mt-1">Requerem atenção</p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                        <p className="text-xs font-semibold text-on-surface-variant">Questões Completas</p>
+                        <p className="text-2xl font-bold text-secondary mt-1">
+                          {resumoAcervo?.validadas || 0}
+                        </p>
+                        <p className="text-xs text-secondary mt-1">Prontas para simulado</p>
+                      </div>
+                    </div>
+
+                    {/* Filter bar */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/30">
+                      <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mr-2">Filtrar:</span>
+                      <button
+                        onClick={() => { setGestaoFilter('all'); setAuditoriaPage(0); }}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-label-md transition-all ${
+                          gestaoFilter === 'all' ? 'bg-primary text-on-primary font-bold' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                        }`}
+                      >
+                        Todas ({resumoAcervo?.total || 0})
+                      </button>
+                      <button
+                        onClick={() => { setGestaoFilter('pendentes'); setAuditoriaPage(0); }}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-label-md transition-all ${
+                          gestaoFilter === 'pendentes' ? 'bg-error text-on-error font-bold' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                        }`}
+                      >
+                        Com Pendências ({resumoAcervo?.pendentes || 0})
+                      </button>
+                      <button
+                        onClick={() => { setGestaoFilter('completas'); setAuditoriaPage(0); }}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-label-md transition-all ${
+                          gestaoFilter === 'completas' ? 'bg-secondary text-on-secondary font-bold' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                        }`}
+                      >
+                        Completas ({resumoAcervo?.validadas || 0})
+                      </button>
+                    </div>
+
+                    {/* Questions List */}
+                    <div className="space-y-3 pt-2">
+                      {auditoriaLoading ? (
+                        <div className="p-12 text-center text-on-surface-variant">Carregando auditoria...</div>
+                      ) : auditoriaItems.length === 0 ? (
+                        <div className="p-12 text-center bg-surface-container-low rounded-xl border border-outline-variant/30 space-y-3">
+                          <span className="material-symbols-outlined text-[48px] text-outline">database</span>
+                          <h3 className="font-title-md font-bold text-on-surface">Base de dados vazia</h3>
+                          <p className="text-body-sm text-on-surface-variant max-w-sm mx-auto">
+                            Nenhuma questão cadastrada para este filtro.
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {auditoriaItems.map((q) => {
+                            const issues = q.pendencias || [];
+                            return (
+                              <div key={q.id} className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="space-y-1.5 min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-code-md bg-surface-container text-on-surface font-bold">
+                                      {q.id}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-primary-fixed/40 text-on-primary-fixed font-semibold">
+                                      {q.disciplina || 'Sem Disciplina'}
+                                    </span>
+                                    {q.banca && (
+                                      <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-surface-container text-on-surface-variant">
+                                        {q.banca} {q.ano ? `(${q.ano})` : ''}
+                                      </span>
+                                    )}
+                                    {issues.length > 0 ? (
+                                      <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-error-container text-on-error-container font-semibold flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[14px]">warning</span>
+                                        <span>{issues.length} {issues.length === 1 ? 'pendência' : 'pendências'}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded text-[11px] font-label-md bg-secondary-fixed text-on-secondary-fixed font-semibold flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                        <span>Completa</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="font-body-md text-sm text-on-surface line-clamp-2">
+                                    {q.enunciado_resumo || q.enunciado || '(Sem enunciado)'}
+                                  </p>
+                                  {issues.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                      {issues.map((iss: string, i: number) => (
+                                        <span key={i} className="text-[10px] font-code-md text-error bg-error-container/40 px-1.5 py-0.5 rounded">
+                                          • {iss}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <button
+                                    onClick={() => handleDeleteQuestion(q.id)}
+                                    className="p-2 rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error transition-colors"
+                                    title="Excluir questão"
+                                  >
+                                    <span className="material-symbols-outlined text-[20px]">delete</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Pagination Controls */}
+                          <div className="flex items-center justify-between pt-4 border-t border-outline-variant/30">
+                            <button
+                              onClick={() => setAuditoriaPage(p => Math.max(0, p - 1))}
+                              disabled={auditoriaPage === 0}
+                              className="px-3.5 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-xs disabled:opacity-50 hover:bg-surface-container-high transition-colors"
+                            >
+                              Anterior
+                            </button>
+                            <span className="text-xs text-on-surface-variant font-medium">
+                              Página {auditoriaPage + 1} de {Math.ceil((gestaoFilter === 'pendentes' ? (resumoAcervo?.pendentes || 0) : gestaoFilter === 'completas' ? (resumoAcervo?.validadas || 0) : (resumoAcervo?.total || 0)) / 50) || 1}
+                            </span>
+                            <button
+                              onClick={() => setAuditoriaPage(p => p + 1)}
+                              disabled={(auditoriaPage + 1) * 50 >= (gestaoFilter === 'pendentes' ? (resumoAcervo?.pendentes || 0) : gestaoFilter === 'completas' ? (resumoAcervo?.validadas || 0) : (resumoAcervo?.total || 0))}
+                              className="px-3.5 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-xs disabled:opacity-50 hover:bg-surface-container-high transition-colors"
+                            >
+                              Próxima
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
               {gestaoSubTab === 'importacao' && (
                 <div className="space-y-6 animate-fadeIn">
@@ -4402,6 +4875,163 @@ export default function App() {
                 </div>
               )}
             </section>
+          )}
+
+          {/* STUDENT DETAIL DRAWER */}
+          {selectedAlunoId && (
+            <div className="fixed inset-0 z-50 flex justify-end bg-inverse-surface/40 backdrop-blur-sm animate-fadeIn">
+              <div className="w-full max-w-2xl bg-surface-container-lowest h-full overflow-y-auto p-6 shadow-2xl flex flex-col justify-between space-y-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between border-b border-outline-variant/30 pb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-on-surface">Detalhes do Aluno</h3>
+                      <p className="text-xs text-on-surface-variant">ID: {selectedAlunoId}</p>
+                    </div>
+                    <button
+                      onClick={() => { setSelectedAlunoId(null); setAlunoDetalhe(null); }}
+                      className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high"
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+
+                  {alunoDetalheLoading ? (
+                    <div className="p-12 text-center text-on-surface-variant">Carregando detalhes do aluno...</div>
+                  ) : !alunoDetalhe ? (
+                    <div className="p-12 text-center text-outline">Nenhum dado encontrado para este aluno.</div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                        <h4 className="font-title-sm font-bold text-on-surface">Evolução de Respostas (30 Dias)</h4>
+                        <div className="flex items-end justify-between h-32 gap-1 pt-4 px-1 overflow-x-auto">
+                          {alunoDetalhe.serie_30d && alunoDetalhe.serie_30d.length > 0 ? (
+                            alunoDetalhe.serie_30d.map((item: any, idx: number) => {
+                              const resp = item.respostas || 0;
+                              const acertos = item.acertos || 0;
+                              const h = Math.max(resp * 4, resp > 0 ? 16 : 6);
+                              const diaFmt = item.dia ? item.dia.split('-').reverse().slice(0, 2).join('/') : '';
+                              return (
+                                <div key={idx} className="flex-1 min-w-[16px] flex flex-col items-center gap-1 h-full justify-end group" title={`${diaFmt}: ${resp} resp., ${acertos} acertos`}>
+                                  <div className="w-full bg-secondary/40 group-hover:bg-secondary rounded-t transition-all flex items-center justify-center text-[8px] font-bold text-on-secondary" style={{ height: `${h}px` }}>
+                                    {resp > 0 ? resp : ''}
+                                  </div>
+                                  <span className="text-[8px] text-outline">{diaFmt}</span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-xs text-outline italic py-6 text-center w-full">Sem registro nos últimos 30 dias</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h4 className="font-title-sm font-bold text-on-surface">Desempenho por Disciplina</h4>
+                        <div className="space-y-2">
+                          {(alunoDetalhe.por_disciplina || []).map((d: any, idx: number) => (
+                            <div key={idx} className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-1.5">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-on-surface">{d.disciplina || 'Geral'}</span>
+                                <span className="font-semibold text-primary">{d.aproveitamento ?? 0}% ({d.acertos}/{d.respostas} acertos)</span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+                                <div className="h-full bg-secondary rounded-full" style={{ width: `${d.aproveitamento ?? 0}%` }}></div>
+                              </div>
+                              <p className="text-[10px] text-outline text-right">Última prática: {formatUltimaPratica(d.ultima)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h4 className="font-title-sm font-bold text-on-surface">Últimas Respostas</h4>
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                          {(alunoDetalhe.ultimas_respostas || []).map((r: any, idx: number) => (
+                            <div key={idx} className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between text-xs">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className={`w-2.5 h-2.5 rounded-full ${r.acertou ? 'bg-secondary' : 'bg-error'}`}></span>
+                                  <span className="font-bold text-on-surface">{r.disciplina || 'Geral'}</span>
+                                  <span className="text-outline text-[10px]">({formatDateTimeSaoPaulo(r.created_at)})</span>
+                                </div>
+                                <p className="text-on-surface-variant truncate max-w-sm">{r.assunto || r.questao_id}</p>
+                              </div>
+                              <span className="text-outline text-[11px]">{formatTempoMedio(r.tempo_segundos)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-outline-variant/30">
+                  <button
+                    onClick={() => { setSelectedAlunoId(null); setAlunoDetalhe(null); }}
+                    className="px-6 py-2.5 rounded-xl bg-primary text-on-primary font-label-md hover:opacity-90 shadow-sm"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* QUESTION PREVIEW MODAL */}
+          {questionModalQ && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-sm p-4 animate-fadeIn">
+              <div className="bg-surface-container-lowest max-w-xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 border border-outline-variant/40 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-outline-variant/30 pb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary-fixed text-on-primary-fixed">
+                      {questionModalQ.id}
+                    </span>
+                    <div>
+                      <h3 className="font-bold text-on-surface">{questionModalQ.disciplina}</h3>
+                      <p className="text-xs text-on-surface-variant">{questionModalQ.banca} {questionModalQ.ano ? `(${questionModalQ.ano})` : ''}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setQuestionModalQ(null)}
+                    className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-sm text-on-surface leading-relaxed">{questionModalQ.enunciado}</p>
+                  <div className="space-y-2">
+                    {questionModalQ.alternativas.map(alt => {
+                      const isCerta = alt.letra === questionModalQ.alternativa_certa;
+                      return (
+                        <div key={alt.letra} className={`p-3 rounded-xl border text-xs flex items-start gap-3 ${isCerta ? 'bg-secondary-fixed/20 border-secondary text-on-surface font-semibold' : 'bg-surface-container-low border-outline-variant/30 text-on-surface-variant'}`}>
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isCerta ? 'bg-secondary text-on-secondary' : 'bg-surface-container text-on-surface'}`}>
+                            {alt.letra}
+                          </span>
+                          <span className="flex-1 mt-0.5">{alt.texto}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {questionModalQ.comentario && (
+                    <div className="p-4 rounded-xl bg-primary-fixed/20 border border-primary/30 space-y-1">
+                      <h4 className="font-bold text-xs text-primary">Comentário Oficial</h4>
+                      <p className="text-xs text-on-surface">{questionModalQ.comentario}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => setQuestionModalQ(null)}
+                    className="px-6 py-2.5 rounded-xl bg-primary text-on-primary font-label-md hover:opacity-90 shadow-sm"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* ================= CLEAR DATABASE CONFIRMATION MODAL ================= */}

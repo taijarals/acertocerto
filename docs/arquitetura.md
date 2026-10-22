@@ -20,9 +20,11 @@ O **ConcursoQuest Pro** é uma aplicação web moderna desenvolvida em React 19,
    - Seleção flexível de quantidade de questões (5, 10, 15 ou 20).
    - Apresentação de questões com metadados estruturados (Banca, Ano, Órgão, Disciplina, Assunto, ID).
    - Seleção interativa de alternativas (A a E) com validação visual imediata e barra de progresso dinâmica.
-5. **Área de Gestão & Importação de JSON**:
-   - Sub-aba de Auditoria de Questões: monitoramento de pendências, contadores de completude e exclusão/gestão de registros.
-   - Sub-aba de Importação de JSON: validador de schema universal para importação em lote de arquivos `.json`.
+5. **Área de Gestão (Painel do Administrador)**:
+    - Sub-aba **Alunos**: KPIs globais, gráfico de 30 dias de respostas, tabela de alunos com busca, ordenação, alerta de inatividade (>= 7 dias) e drawer de detalhes (gráfico de 30 dias do aluno, por disciplina e últimas respostas em fuso America/Sao_Paulo).
+    - Sub-aba **Questões críticas**: listagem de questões com alta taxa de erro ou suspeitas de erro, comparativo de gabarito e modal de visualização.
+    - Sub-aba **Auditoria de Questões**: monitoramento de pendências, contadores de completude e exclusão/gestão de registros.
+    - Sub-aba **Importação de JSON**: validador de schema universal para importação em lote de arquivos `.json`.
 6. **Radar e Matriz de Navegação (Coluna Lateral Direita)**:
    - Cronômetro progressivo de rodada.
    - Matriz de navegação rápida do bloco de 5 questões com indicadores visuais de acerto/erro.

@@ -26,3 +26,7 @@ O banco de dados PostgreSQL no Supabase utiliza o schema dedicado **`acertocerto
 - `opcoes_filtro(...)`: Retorna opções disponíveis de filtros com base nos critérios selecionados.
 - `desempenho_por_materia()`: Retorna métricas consolidadas por disciplina para o usuário logado (respostas, acertos, aproveitamento, tendência, status, ritmo médio, última prática).
 - `habitos_estudo()`: Retorna hábitos de estudo do usuário (distribuição por período do dia, melhor período, taxa de recuperação de erros e consistência nas últimas 6 semanas).
+- `admin_visao_geral()`: Retorna visão geral de KPIs administrativos e série de 30 dias de respostas.
+- `admin_alunos()`: Retorna listagem e métricas de todos os alunos cadastrados para o painel admin.
+- `admin_aluno_detalhe(p_user_id)`: Retorna detalhes de desempenho de um aluno específico (por disciplina, série de 30 dias e últimas respostas).
+- `admin_questoes_criticas(p_min_respostas, p_limite)`: Retorna questões com alta taxa de erro ou suspeitas de erro.
