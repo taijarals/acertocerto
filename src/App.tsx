@@ -1946,6 +1946,52 @@ export default function App() {
     setOfensivasSubTab('simulado');
   };
 
+  const handleStartRevisaoMarcadas = async (disciplina?: string) => {
+    if (!isSupabaseConfigured() || !supabase) {
+      showNotification("Entre na sua conta para revisar suas questões marcadas.");
+      return;
+    }
+    setRoundLoading(true);
+    setRoundType('desafio');
+    let roundQuestions: Questao[] = [];
+    try {
+      const { data, error } = await supabase.rpc('sortear_marcadas', {
+        p_motivos: null,
+        p_disciplinas: disciplina ? [disciplina] : null,
+        p_limite: Math.min(Object.keys(marcacoes).length, 20) || 5
+      });
+      if (error) {
+        console.error('[Supabase] sortear_marcadas:', error);
+        showNotification("Não foi possível carregar suas questões marcadas. Tente novamente.");
+        setRoundLoading(false);
+        return;
+      }
+      roundQuestions = Array.isArray(data) ? data.map(mapearQuestao) : [];
+    } catch (error) {
+      console.error('[Supabase] sortear_marcadas:', error);
+      showNotification("Não foi possível carregar suas questões marcadas. Tente novamente.");
+      setRoundLoading(false);
+      return;
+    }
+    setRoundLoading(false);
+    if (roundQuestions.length === 0) {
+      showNotification("Nenhuma questão marcada para revisar.");
+      return;
+    }
+    questionStartTimestampRef.current = Date.now();
+    setActiveRoundQuestions(roundQuestions);
+    setAnswers(new Array(roundQuestions.length).fill(null));
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setAnsweredState(false);
+    setTimerSeconds(0);
+    setRoundComplete(false);
+    setSimuladoStep('quiz');
+    showNotification(`Revisão iniciada com ${roundQuestions.length} questões marcadas!`);
+    setActiveTab('ofensivas');
+    setOfensivasSubTab('simulado');
+  };
+
   const handleStartFocadoRound = async (discipline?: string) => {
     setRoundLoading(true);
     setRoundType('desafio');
@@ -2760,6 +2806,15 @@ export default function App() {
                           >
                             <span className="material-symbols-outlined text-[18px]">replay</span>
                             <span>Revisar erros ({habitosEstudo.recuperacao.pendentes_revisao})</span>
+                          </button>
+                        )}
+                        {Object.keys(marcacoes).length > 0 && (
+                          <button
+                            onClick={() => handleStartRevisaoMarcadas()}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-tertiary-container text-on-tertiary-container text-xs sm:text-sm font-semibold active:scale-95 shadow-sm transition-all whitespace-nowrap self-start sm:self-auto"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">flag</span>
+                            <span>Revisar marcadas ({Object.keys(marcacoes).length})</span>
                           </button>
                         )}
                       </div>
