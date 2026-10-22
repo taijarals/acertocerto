@@ -1546,7 +1546,12 @@ export default function App() {
       supabase.from('marcacoes_revisao')
         .select('questao_id, motivo, observacao')
         .then(({ data, error }) => {
-          if (!error && data) {
+          if (error) {
+            console.error('[Supabase] marcacoes_revisao:', error);
+            showNotification("Não foi possível carregar suas marcações de revisão.");
+            return;
+          }
+          if (data) {
             const map: Record<string, { motivo: string | null; observacao: string | null }> = {};
             data.forEach((row: any) => {
               map[row.questao_id] = { motivo: row.motivo, observacao: row.observacao };
@@ -1560,6 +1565,16 @@ export default function App() {
   }, [session]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isRevisaoModalOpen) {
+        setIsRevisaoModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isRevisaoModalOpen]);
+
+  useEffect(() => {
     if (currentQ?.id && marcacoes[currentQ.id]) {
       setRevisaoMotivo(marcacoes[currentQ.id].motivo ?? null);
       setRevisaoObs(marcacoes[currentQ.id].observacao ?? '');
@@ -1571,6 +1586,7 @@ export default function App() {
 
   const handleSaveMarcacao = async () => {
     if (!session?.user?.id || !supabase || !currentQ?.id) return;
+    const jaEstavaMarcada = Boolean(marcacoes[currentQ.id]);
     try {
       const payload = {
         user_id: session.user.id,
@@ -1590,7 +1606,7 @@ export default function App() {
         ...prev,
         [currentQ.id]: { motivo: revisaoMotivo, observacao: revisaoObs.trim() ? revisaoObs.trim() : null }
       }));
-      showNotification("Questão marcada para revisão!");
+      showNotification(jaEstavaMarcada ? "Marcação atualizada." : "Questão marcada para revisão!");
       setIsRevisaoModalOpen(false);
     } catch (e) {
       console.error('Erro ao salvar marcação:', e);
@@ -4989,8 +5005,14 @@ CREATE POLICY "Permitir acesso total em questoes acertocerto" ON acertocerto.que
 
       {/* ================= MODAL MARCAR REVISÃO ================= */}
       {isRevisaoModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="max-w-md w-full bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-xl space-y-5">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setIsRevisaoModalOpen(false)}
+        >
+          <div
+            className="max-w-md w-full bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-xl space-y-5"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-tertiary">flag</span>
@@ -5013,9 +5035,9 @@ CREATE POLICY "Permitir acesso total em questoes acertocerto" ON acertocerto.que
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { key: null, label: 'Sem motivo específico' },
-                  { key: 'duvida', label: 'Dúvida' },
-                  { key: 'memorizar', label: 'Memorizar' },
-                  { key: 'suspeita_erro', label: 'Suspeita de erro' },
+                  { key: 'duvida', label: 'Chutei / tive dúvida' },
+                  { key: 'memorizar', label: 'Quero memorizar' },
+                  { key: 'suspeita_erro', label: 'Suspeito de erro na questão' },
                 ].map(item => (
                   <button
                     key={String(item.key)}

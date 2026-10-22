@@ -45,10 +45,10 @@ CREATE TABLE IF NOT EXISTS acertocerto.respostas_usuario (
 
 -- 5. Tabela de Marcações de Revisão
 CREATE TABLE IF NOT EXISTS acertocerto.marcacoes_revisao (
-    user_id UUID,
-    questao_id VARCHAR REFERENCES acertocerto.questoes(id) ON DELETE CASCADE,
-    motivo VARCHAR CHECK (motivo IN ('duvida', 'memorizar', 'suspeita_erro')),
-    observacao VARCHAR(500),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    questao_id VARCHAR NOT NULL REFERENCES acertocerto.questoes(id) ON DELETE CASCADE,
+    motivo TEXT NULL CHECK (motivo IS NULL OR motivo IN ('duvida','memorizar','suspeita_erro')),
+    observacao TEXT NULL CHECK (observacao IS NULL OR length(observacao) <= 500),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     PRIMARY KEY (user_id, questao_id)
@@ -129,7 +129,14 @@ ALTER TABLE acertocerto.configuracoes_usuario ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir leitura de questões para todos" ON acertocerto.questoes FOR SELECT USING (true);
 CREATE POLICY "Permitir inserção de questões" ON acertocerto.questoes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Permitir gestão de respostas do próprio usuário" ON acertocerto.respostas_usuario FOR ALL USING (true);
-CREATE POLICY "Permitir gestão de marcações de revisão do próprio usuário" ON acertocerto.marcacoes_revisao FOR ALL USING (true);
+ALTER TABLE acertocerto.marcacoes_revisao ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Permitir gestão de marcações de revisão do próprio usuário" ON acertocerto.marcacoes_revisao;
+CREATE POLICY "Permitir gestão de marcações de revisão do próprio usuário" 
+ON acertocerto.marcacoes_revisao 
+FOR ALL 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Permitir gestão de simulados" ON acertocerto.simulados FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de tentativas de simulado" ON acertocerto.tentativas_simulado FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de desafios" ON acertocerto.desafios FOR ALL USING (true);
