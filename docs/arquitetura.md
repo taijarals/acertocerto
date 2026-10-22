@@ -9,7 +9,7 @@
 - **Tipografia**: *Plus Jakarta Sans* para títulos e *Inter* para o corpo de texto, garantindo legibilidade e clareza em simulados e relatórios.
 
 ## Visão Geral
-O **ConcursoQuest Pro** é uma aplicação web moderna desenvolvida em React 19, TypeScript e Tailwind CSS, estruturada como uma Single Page Application (SPA) de alta performance para estudos direcionados a concursos públicos (OAB, Tribunais, Bancas CESGRANRIO, FGV, CEBRASPE, etc.).
+O **ConcursoQuest Pro** é uma aplicação web moderna desenvolvida em React 19, TypeScript e Tailwind CSS, estruturada como uma Single Page Application (SPA) de alta performance para estudos direcionados a concursos públicos (OAB, Tribunais, Bancas CESGRANRIO, FGV, CEBRASPE, etc.). O app não utiliza IA em tempo de execução; os comentários das questões são curados e importados previamente.
 
 ## Componentes Principais
 1. **Painel Início (Visão Geral)**: Dashboard executivo com quadros de indicadores (KPIs de total de questões, disciplinas, aproveitamento geral), gráfico de evolução geral de desempenho e resumo detalhado por disciplina e assuntos.
@@ -20,11 +20,9 @@ O **ConcursoQuest Pro** é uma aplicação web moderna desenvolvida em React 19,
    - Seleção flexível de quantidade de questões (5, 10, 15 ou 20).
    - Apresentação de questões com metadados estruturados (Banca, Ano, Órgão, Disciplina, Assunto, ID).
    - Seleção interativa de alternativas (A a E) com validação visual imediata e barra de progresso dinâmica.
-4. **Área de Gestão & Importação de JSON**:
+5. **Área de Gestão & Importação de JSON**:
    - Sub-aba de Auditoria de Questões: monitoramento de pendências, contadores de completude e exclusão/gestão de registros.
    - Sub-aba de Importação de JSON: validador de schema universal para importação em lote de arquivos `.json`.
-5. **Radar e Matriz de Navegação (Coluna Lateral Direita)**:
+6. **Radar e Matriz de Navegação (Coluna Lateral Direita)**:
    - Cronômetro progressivo de rodada.
    - Matriz de navegação rápida do bloco de 5 questões com indicadores visuais de acerto/erro.
-6. **Camada de IA (Server-side)**:
-   - Rota Express em `server.ts` integrada ao `@google/genai` (`gemini-3.8-flash`) para gerar explicações pedagógicas avançadas e novas questões personalizadas.

@@ -39,7 +39,6 @@ interface Questao {
   pagina: number;
   explicacao?: Explicacao;
   comentario?: string;
-  source?: 'official' | 'ai_generated';
   valida?: boolean;
   created_at?: string;
 }
@@ -84,8 +83,7 @@ const SAMPLE_RICH_QUESTIONS: Questao[] = [
       { letra: "E", texto: "Objeto" }
     ],
     alternativa_certa: "C",
-    comentario_ia: "A Forma é o requisito vinculado que diz respeito à exteriorização do ato administrativo. Em regra, o ato deve ser escrito, salvo exceções previstas em lei.",
-    source: "official"
+    comentario_ia: "A Forma é o requisito vinculado que diz respeito à exteriorização do ato administrativo. Em regra, o ato deve ser escrito, salvo exceções previstas em lei."
   },
   {
     id: "q_demo_02",
@@ -105,8 +103,7 @@ const SAMPLE_RICH_QUESTIONS: Questao[] = [
       { letra: "E", texto: "a prisão de qualquer pessoa e o lugar onde se encuentre serão comunicados imediatamente ao juiz competente e à família do preso." }
     ],
     alternativa_certa: "B",
-    comentario_ia: "O art. 5º, inciso IX, da CF/88 estabelece que é livre a expressão da atividade intelectual, artística, científica e de comunicação, independentemente de censura ou licença.",
-    source: "official"
+    comentario_ia: "O art. 5º, inciso IX, da CF/88 estabelece que é livre a expressão da atividade intelectual, artística, científica e de comunicação, independentemente de censura ou licença."
   },
   {
     id: "q_demo_03",
@@ -126,8 +123,7 @@ const SAMPLE_RICH_QUESTIONS: Questao[] = [
       { letra: "E", texto: "Passado o prazo, o edital ficou aberto à todos os interessados." }
     ],
     alternativa_certa: "C",
-    comentario_ia: "O verbo 'referir' rege a preposição 'a' e o termo feminino 'críticas' aceita artigo 'as', ocorrendo crase: 'às'. Nas demais opções há desvios (locução temporal masculina, nome de cidade sem artigo, verbo transitivo direto e pronome indefinido).",
-    source: "official"
+    comentario_ia: "O verbo 'referir' rege a preposição 'a' e o termo feminino 'críticas' aceita artigo 'as', ocorrendo crase: 'às'. Nas demais opções há desvios (locução temporal masculina, nome de cidade sem artigo, verbo transitivo direto e pronome indefinido)."
   },
   {
     id: "q_demo_04",
@@ -147,8 +143,7 @@ const SAMPLE_RICH_QUESTIONS: Questao[] = [
       { letra: "E", texto: "Se serei aprovado no concurso, então estudo estatística." }
     ],
     alternativa_certa: "B",
-    comentario_ia: "A equivalência da condicional (P -> Q) pode ser dada por (~Q -> ~P) (contrapositiva). Negando a conclusão e invertendo: 'Se não serei aprovado, então não estudo estatística'.",
-    source: "official"
+    comentario_ia: "A equivalência da condicional (P -> Q) pode ser dada por (~Q -> ~P) (contrapositiva). Negando a conclusão e invertendo: 'Se não serei aprovado, então não estudo estatística'."
   },
   {
     id: "q_demo_05",
@@ -168,8 +163,7 @@ const SAMPLE_RICH_QUESTIONS: Questao[] = [
       { letra: "E", texto: "Ferramenta de firewall que bloqueia tráfego suspeito na rede." }
     ],
     alternativa_certa: "C",
-    comentario_ia: "Ransomware é o tipo de código malicioso que sequestra os dados do usuário por meio de criptografia forte, exigindo um resgate (normalmente em criptomoedas) em troca da chave de descriptografia.",
-    source: "official"
+    comentario_ia: "Ransomware é o tipo de código malicioso que sequestra os dados do usuário por meio de criptografia forte, exigindo um resgate (normalmente em criptomoedas) em troca da chave de descriptografia."
   }
 ];
 
@@ -619,8 +613,7 @@ export default function App() {
       pagina: item.pagina || 1,
       explicacao: item.explicacao,
       valida: item.valida,
-      created_at: item.created_at,
-      source: "official"
+      created_at: item.created_at
     };
   };
 
@@ -2132,7 +2125,6 @@ export default function App() {
             pagina: item.pagina || 1,
             explicacao: item.explicacao || undefined,
             comentario: item.comentario_ia || item.explicacao?.resumo || item.comentario || "Comentário padrão.",
-            source: "official" as const
           }));
           allNewQuestions = [...allNewQuestions, ...validated];
         }
@@ -3090,11 +3082,11 @@ export default function App() {
                                     <span className="px-2.5 py-0.5 rounded-md font-label-md text-label-md bg-secondary-fixed text-on-secondary-fixed font-semibold">
                                       {currentQ.disciplina}
                                     </span>
-                                    {currentQ.source === 'ai_generated' && (
-                                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-tertiary-fixed text-on-tertiary-fixed" title="Gerado com IA Pedagógica">
-                                        ✨ Gerada por IA
-                                      </span>
-                                    )}
+                                    
+                                      
+                                        
+                                      
+                                    
                                   </div>
 
                                   <div className="flex items-center gap-1 text-on-surface-variant">
