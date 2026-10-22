@@ -7,6 +7,13 @@
 3. **Métricas de Desempenho Real**:
    - **Seu Retrato por Matéria**: Exibe o status (`solido`, `em_evolucao`, `em_atencao`, `poucos_dados`), domínio, tendência nos últimos 7 dias, ritmo médio formatado (`X min Y seg`), e última prática calculada no fuso `America/Sao_Paulo`.
    - **Quando Você Rende Mais**: Distribuição por período do dia (Madrugada, Manhã, Tarde, Noite), identificação do melhor horário, taxa de recuperação de erros (com limiar mínimo de 5 questões refeitas), e consistência das últimas 6 semanas (com dias ativos e tooltips de período).
+   - **Ranking de Desempenho**:
+     - Cada usuário possui um código anônimo público (`AC-XXXXX`) exibido nas Configurações e no Ranking.
+     - O ranking contabiliza apenas a **primeira tentativa** de cada questão por usuário.
+     - A nota combina aproveitamento e volume de questões através do **limite inferior do intervalo de confiança de Wilson (95%)**, garantindo que quem responde mais tenha uma nota mais confiável.
+     - Períodos suportados: Últimos 30 dias (`30d`) e Geral (`geral`). Filtro opcional por disciplina.
+     - Entra no ranking quem respondeu pelo menos 1 questão no recorte escolhido.
+     - Inclui sempre a linha do usuário logado (`eh_voce = true`) mesmo se estiver fora do top, exibindo separador `…` em caso de lacuna.
 4. **Tempo por Questão**:
    - O tempo gasto em cada questão é medido através de `useRef` e armazenado em `tempo_segundos` (limitado a 3600s) na tabela `respostas_usuario`.
 5. **Acervo e Planos B**:
@@ -14,3 +21,4 @@
 6. **Otimização de Chamadas RPC**:
    - As chamadas a `opcoes_filtro` são executadas estritamente sob demanda (visibilidade das telas de Configurações ou Simulado Config), unificando anos/disciplinas e evitando laços por matéria (`fetchTargetCounts` em chamada única).
    - A função `resumo_acervo` é invocada exatamente uma vez no carregamento inicial (`hasLoadedResumoRef`).
+

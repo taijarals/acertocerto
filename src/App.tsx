@@ -278,7 +278,14 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'inicio' | 'ofensivas' | 'desempenho' | 'gestao' | 'configuracoes'>('inicio');
   const [ofensivasSubTab, setOfensivasSubTab] = useState<'desafios' | 'simulado' | 'focado'>('desafios');
-  const [desempenhoSubTab, setDesempenhoSubTab] = useState<'geral' | 'materias' | 'habitos'>('geral');
+  const [desempenhoSubTab, setDesempenhoSubTab] = useState<'geral' | 'materias' | 'habitos' | 'ranking'>('geral');
+  const [meuCodigo, setMeuCodigo] = useState<string | null>(null);
+  const [rankingPeriod, setRankingPeriod] = useState<'30d' | 'geral'>('30d');
+  const [rankingDisciplina, setRankingDisciplina] = useState<string | null>(null);
+  const [rankingData, setRankingData] = useState<any[]>([]);
+  const [rankingDisciplinasList, setRankingDisciplinasList] = useState<any[]>([]);
+  const [rankingLoading, setRankingLoading] = useState<boolean>(false);
+  const [rankingError, setRankingError] = useState<boolean>(false);
   const [gestaoSubTab, setGestaoSubTab] = useState<'alunos' | 'criticas' | 'auditoria' | 'importacao'>('alunos');
   const [gestaoFilter, setGestaoFilter] = useState<'all' | 'pendentes' | 'completas'>('all');
   const [clearDbModalOpen, setClearDbModalOpen] = useState<boolean>(false);
@@ -324,6 +331,8 @@ export default function App() {
       });
     }
   }, []);
+
+
 
   // User Goals & Settings States
   const [metaQuestoesDia, setMetaQuestoesDia] = useState<number>(() => {
@@ -863,6 +872,53 @@ export default function App() {
     });
   }, [session]);
 
+  useEffect(() => {
+    if (isSupabaseConfigured() && supabase && session?.user?.id) {
+      supabase.from('perfis').select('codigo').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
+        if (data?.codigo) setMeuCodigo(data.codigo);
+      });
+    } else {
+      setMeuCodigo(null);
+    }
+  }, [session]);
+
+  const fetchRankingData = async () => {
+    if (!isSupabaseConfigured() || !supabase) return;
+    setRankingLoading(true);
+    setRankingError(false);
+    try {
+      const [resRank, resDisc] = await Promise.all([
+        supabase.rpc('ranking', { p_disciplina: rankingDisciplina, p_periodo: rankingPeriod, p_limite: 100 }),
+        supabase.rpc('ranking_disciplinas', { p_periodo: rankingPeriod })
+      ]);
+      if (resRank.error) {
+        console.error('[Supabase] ranking:', resRank.error);
+        setRankingError(true);
+      } else if (resRank.data) {
+        setRankingData(resRank.data);
+      }
+      if (resDisc.error) {
+        console.error('[Supabase] ranking_disciplinas:', resDisc.error);
+      } else if (resDisc.data) {
+        setRankingDisciplinasList(resDisc.data);
+        if (rankingDisciplina !== null && !resDisc.data.some((d: any) => d.disciplina === rankingDisciplina)) {
+          setRankingDisciplina(null);
+        }
+      }
+    } catch (err) {
+      console.error('[Supabase] ranking:', err);
+      setRankingError(true);
+    } finally {
+      setRankingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'desempenho' && desempenhoSubTab === 'ranking' && session?.user) {
+      fetchRankingData();
+    }
+  }, [activeTab, desempenhoSubTab, rankingPeriod, rankingDisciplina, session]);
+
   const fetchAdminAlunosData = async () => {
     if (!isSupabaseConfigured() || !supabase) return;
     setAdminLoading(true);
@@ -944,7 +1000,8 @@ export default function App() {
 
   const filteredAlunos = adminAlunos.filter(a => {
     if (!adminSearch) return true;
-    return (a.email || '').toLowerCase().includes(adminSearch.toLowerCase());
+    const term = adminSearch.toLowerCase();
+    return (a.email || '').toLowerCase().includes(term) || (a.codigo || '').toLowerCase().includes(term);
   }).sort((a, b) => {
     let valA = a[adminSortField];
     let valB = b[adminSortField];
@@ -3563,11 +3620,11 @@ export default function App() {
           {/* ================= TAB: DESEMPENHO ================= */}
           {activeTab === 'desempenho' && (
             <section className="space-y-6">
-              {/* Top Segmented Sub-Tabs Bar (Geral | Matérias | Hábitos) */}
-              <div className="bg-primary p-2 rounded-2xl shadow-md flex items-center justify-center gap-2 max-w-md mx-auto">
+              {/* Top Segmented Sub-Tabs Bar (Geral | Matérias | Hábitos | Ranking) */}
+              <div className="bg-primary p-2 rounded-2xl shadow-md flex items-center justify-center gap-1.5 max-w-xl mx-auto">
                 <button
                   onClick={() => setDesempenhoSubTab('geral')}
-                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     desempenhoSubTab === 'geral'
                       ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -3577,7 +3634,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setDesempenhoSubTab('materias')}
-                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     desempenhoSubTab === 'materias'
                       ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -3587,13 +3644,23 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setDesempenhoSubTab('habitos')}
-                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     desempenhoSubTab === 'habitos'
                       ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   Hábitos
+                </button>
+                <button
+                  onClick={() => setDesempenhoSubTab('ranking')}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    desempenhoSubTab === 'ranking'
+                      ? 'bg-white text-primary shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Ranking
                 </button>
               </div>
 
@@ -4200,6 +4267,191 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+              {/* ================= SUB-TAB: RANKING ================= */}
+              {desempenhoSubTab === 'ranking' && (
+                <div className="space-y-6 animate-fadeIn">
+                  {isSupabaseConfigured() && !session?.user ? (
+                    <div className="p-12 text-center bg-surface-container-low rounded-2xl border border-outline-variant/30 space-y-3">
+                      <span className="material-symbols-outlined text-[40px] text-primary">lock</span>
+                      <h3 className="font-title-md font-bold text-on-surface">Entre na sua conta para ver o ranking.</h3>
+                      <p className="text-xs text-on-surface-variant">Acesse sua conta para competir e acompanhar sua posição no ranking.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Top Controls: Period & Discipline */}
+                      <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div>
+                            <h2 className="font-title-lg font-bold text-on-surface flex items-center gap-2">
+                              <span className="material-symbols-outlined text-primary">military_tech</span>
+                              <span>Ranking de Desempenho</span>
+                            </h2>
+                            <p className="text-body-sm text-on-surface-variant">Compare seu desempenho com outros concurseiros de forma anônima.</p>
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-3">
+                            {/* Period segmented control */}
+                            <div className="flex rounded-xl bg-surface-container p-1 border border-outline-variant/40">
+                              <button
+                                type="button"
+                                onClick={() => setRankingPeriod('30d')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${rankingPeriod === '30d' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+                              >
+                                Últimos 30 dias
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRankingPeriod('geral')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${rankingPeriod === 'geral' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+                              >
+                                Geral
+                              </button>
+                            </div>
+
+                            {/* Discipline select */}
+                            <select
+                              value={rankingDisciplina || ''}
+                              onChange={(e) => setRankingDisciplina(e.target.value ? e.target.value : null)}
+                              className="px-3.5 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 text-xs font-semibold text-on-surface focus:outline-none focus:border-primary"
+                            >
+                              <option value="">Todas as disciplinas (global)</option>
+                              {rankingDisciplinasList.map((d: any, idx: number) => (
+                                <option key={idx} value={d.disciplina}>
+                                  {d.disciplina} ({d.participantes} participantes)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sua Posição Card */}
+                      {(() => {
+                        const userRow = rankingData.find((r: any) => r.eh_voce);
+                        const maxPos = rankingData.reduce((max, r) => Math.max(max, r.posicao || 0), rankingData.length);
+                        return (
+                          <div className="p-5 rounded-2xl bg-surface-container-low border border-outline-variant/40 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-2xl bg-primary-fixed text-primary flex items-center justify-center font-bold">
+                                <span className="material-symbols-outlined text-[24px]">emoji_events</span>
+                              </div>
+                              <div>
+                                <h3 className="font-title-md font-bold text-on-surface">Sua Posição</h3>
+                                {userRow ? (
+                                  <p className="text-xs text-on-surface-variant mt-0.5">
+                                    Você está em <strong className="text-primary font-bold">º{userRow.posicao} lugar</strong> de {maxPos} participantes (Código: <strong className="font-code-md text-on-surface">{userRow.codigo}</strong>)
+                                  </p>
+                                ) : (
+                                  <p className="text-xs text-on-surface-variant mt-0.5">
+                                    Você ainda não respondeu questões neste recorte.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            {userRow && (
+                              <div className="flex items-center gap-6 text-xs font-semibold">
+                                <div className="text-right">
+                                  <p className="text-outline">Aproveitamento</p>
+                                  <p className="text-sm font-bold text-secondary">{userRow.aproveitamento}%</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-outline">Respostas</p>
+                                  <p className="text-sm font-bold text-primary">{userRow.respostas}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-outline">Nota</p>
+                                  <p className="text-sm font-bold text-tertiary">{userRow.nota !== undefined ? Number(userRow.nota).toFixed(1) : '—'}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Ranking Table / List */}
+                      <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-title-md font-bold text-on-surface">Classificação do Ranking</h3>
+                          <button
+                            onClick={fetchRankingData}
+                            className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface font-bold text-xs hover:bg-surface-container-high flex items-center gap-1.5 shadow-sm"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">refresh</span>
+                            <span>Atualizar</span>
+                          </button>
+                        </div>
+
+                        {rankingLoading ? (
+                          <div className="p-12 text-center text-on-surface-variant">Carregando ranking...</div>
+                        ) : rankingError ? (
+                          <div className="p-12 text-center bg-error-container/20 rounded-xl border border-error/30 space-y-2">
+                            <span className="material-symbols-outlined text-[32px] text-error">error</span>
+                            <p className="text-sm font-bold text-on-surface">Não foi possível carregar o ranking.</p>
+                            <button onClick={fetchRankingData} className="px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold">Tentar novamente</button>
+                          </div>
+                        ) : rankingData.length === 0 ? (
+                          <div className="p-12 text-center bg-surface-container-low rounded-xl border border-outline-variant/30">
+                            <p className="text-xs text-outline italic">Nenhum participante no ranking para este recorte.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {rankingData.map((row: any, idx: number) => {
+                              const prevRow = idx > 0 ? rankingData[idx - 1] : null;
+                              const hasGap = prevRow && row.posicao > prevRow.posicao + 1;
+                              const isVoce = row.eh_voce;
+                              
+                              let posDisplay: any = row.posicao;
+                              if (row.posicao === 1) posDisplay = '🥇 1º';
+                              else if (row.posicao === 2) posDisplay = '🥈 2º';
+                              else if (row.posicao === 3) posDisplay = '🥉 3º';
+                              else posDisplay = `${row.posicao}º`;
+
+                              return (
+                                <React.Fragment key={idx}>
+                                  {hasGap && (
+                                    <div className="py-2 text-center text-outline font-bold tracking-widest text-sm">
+                                      …
+                                    </div>
+                                  )}
+                                  <div className={`p-4 rounded-xl border flex items-center justify-between text-xs transition-colors ${isVoce ? 'bg-primary-container/30 border-primary shadow-sm font-semibold' : 'bg-surface-container-low border-outline-variant/30 text-on-surface'}`}>
+                                    <div className="flex items-center gap-4">
+                                      <span className="w-14 text-center font-bold text-sm">{posDisplay}</span>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-code-md font-bold text-on-surface">{row.codigo}</span>
+                                          {isVoce && (
+                                            <span className="px-2 py-0.5 rounded-full bg-primary text-on-primary text-[10px] font-bold">Você</span>
+                                          )}
+                                        </div>
+                                        <span className="text-[10px] text-outline">{row.respostas} respostas · {row.acertos} acertos</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-6 text-right">
+                                      <div>
+                                        <p className="text-[10px] text-outline">Aproveitamento</p>
+                                        <p className="font-bold text-secondary text-sm">{row.aproveitamento}%</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] text-outline">Nota</p>
+                                        <p className="font-bold text-tertiary text-sm">{row.nota !== undefined ? Number(row.nota).toFixed(1) : '—'}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <p className="text-[11px] text-outline italic pt-2 border-t border-outline-variant/20">
+                          A nota combina aproveitamento e quantidade de questões: quem responde mais tem uma nota mais confiável. Conta apenas a primeira tentativa de cada questão. Só aparece no ranking quem respondeu pelo menos uma questão no recorte escolhido.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           )}
 
@@ -4346,7 +4598,7 @@ export default function App() {
                         </span>
                         <input
                           type="text"
-                          placeholder="Buscar por e-mail..."
+                          placeholder="Buscar por e-mail ou código..."
                           value={adminSearch}
                           onChange={(e) => setAdminSearch(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 text-xs text-on-surface focus:outline-none focus:border-primary"
@@ -4366,6 +4618,7 @@ export default function App() {
                             <thead>
                               <tr className="border-b border-outline-variant/40 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                                 <th className="py-3 px-3 cursor-pointer hover:text-primary" onClick={() => handleSortAlunos('email')}>Aluno</th>
+                                <th className="py-3 px-3 cursor-pointer hover:text-primary" onClick={() => handleSortAlunos('codigo')}>Código</th>
                                 <th className="py-3 px-3 cursor-pointer hover:text-primary" onClick={() => handleSortAlunos('ultima_atividade')}>Última Atividade</th>
                                 <th className="py-3 px-3 cursor-pointer hover:text-primary text-right" onClick={() => handleSortAlunos('respostas_total')}>Respostas</th>
                                 <th className="py-3 px-3 cursor-pointer hover:text-primary text-right" onClick={() => handleSortAlunos('aproveitamento')}>Aproveitamento</th>
@@ -4392,6 +4645,9 @@ export default function App() {
                                         )}
                                       </div>
                                       <span className="text-[10px] text-outline">Cadastrado em {formatUltimaPratica(aluno.cadastrado_em)}</span>
+                                    </td>
+                                    <td className="py-3.5 px-3 font-code-md font-bold text-primary">
+                                      {aluno.codigo || '—'}
                                     </td>
                                     <td className="py-3.5 px-3">
                                       <span className={`font-semibold ${alertaInativo ? 'text-error' : 'text-on-surface'}`}>
@@ -4885,7 +5141,7 @@ export default function App() {
                   <div className="flex items-center justify-between border-b border-outline-variant/30 pb-4">
                     <div>
                       <h3 className="text-lg font-bold text-on-surface">Detalhes do Aluno</h3>
-                      <p className="text-xs text-on-surface-variant">ID: {selectedAlunoId}</p>
+                      <p className="text-xs text-on-surface-variant">ID: {selectedAlunoId} {adminAlunos.find(a => a.user_id === selectedAlunoId)?.codigo ? `· Código: ${adminAlunos.find(a => a.user_id === selectedAlunoId)?.codigo}` : ''}</p>
                     </div>
                     <button
                       onClick={() => { setSelectedAlunoId(null); setAlunoDetalhe(null); }}
@@ -5081,6 +5337,34 @@ export default function App() {
               </div>
 
               <form onSubmit={handleSaveConfig} className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-sm space-y-6">
+                {/* Seu Código no Ranking */}
+                <div className="space-y-4">
+                  <h3 className="font-title-md font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+                    <span className="material-symbols-outlined text-primary">badge</span>
+                    <span>Seu Código no Ranking</span>
+                  </h3>
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                    <div>
+                      <p className="text-xs text-on-surface-variant font-medium">Seu identificador público anônimo:</p>
+                      <p className="font-code-md text-base font-bold text-primary mt-0.5">{meuCodigo || 'AC-.....'}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (meuCodigo) {
+                          navigator.clipboard.writeText(meuCodigo);
+                          showNotification("Código copiado.");
+                        }
+                      }}
+                      disabled={!meuCodigo}
+                      className="px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                      <span>Copiar Código</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Metas Diárias & Semanais */}
                 <div className="space-y-4">
                   <h3 className="font-title-md font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/30 pb-2">
