@@ -843,7 +843,19 @@ export default function App() {
     if (selectedAnos.length > 0 && (!q.ano || !selectedAnos.includes(q.ano))) return false;
     return true;
   });
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  // Supabase Auth States
+  const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase || !session?.user) { setIsAdmin(false); return; }
+    supabase.rpc('is_admin').then(({ data, error }) => {
+      if (error) { console.error('[Supabase] is_admin:', error); setIsAdmin(false); return; }
+      setIsAdmin(data === true);
+    });
+  }, [session]);
+
+
   const [uploadFeedback, setUploadFeedback] = useState<{ filename: string; count: number } | null>(null);
   const [stagedQuestions, setStagedQuestions] = useState<Questao[]>([]);
   const [previewTab, setPreviewTab] = useState<'validadas' | 'pendentes'>('validadas');
@@ -860,17 +872,6 @@ export default function App() {
     totalCount: number;
   } | null>(null);
 
-  // Supabase Auth States
-  const [session, setSession] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !supabase || !session?.user) { setIsAdmin(false); return; }
-    supabase.rpc('is_admin').then(({ data, error }) => {
-      if (error) { console.error('[Supabase] is_admin:', error); setIsAdmin(false); return; }
-      setIsAdmin(data === true);
-    });
-  }, [session]);
-  const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [emailInput, setEmailInput] = useState<string>('');
@@ -1535,6 +1536,91 @@ export default function App() {
 
   const currentQ = activeRoundQuestions[currentIndex] || activeRoundQuestions[0] || questions[0] || SAMPLE_QUESTION_TEMPLATE[0];
 
+  const [marcacoes, setMarcacoes] = useState<Record<string, { motivo: string | null; observacao: string | null }>>({});
+  const [isRevisaoModalOpen, setIsRevisaoModalOpen] = useState<boolean>(false);
+  const [revisaoMotivo, setRevisaoMotivo] = useState<string | null>(null);
+  const [revisaoObs, setRevisaoObs] = useState<string>('');
+
+  useEffect(() => {
+    if (isSupabaseConfigured() && supabase && session?.user?.id) {
+      supabase.from('marcacoes_revisao')
+        .select('questao_id, motivo, observacao')
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const map: Record<string, { motivo: string | null; observacao: string | null }> = {};
+            data.forEach((row: any) => {
+              map[row.questao_id] = { motivo: row.motivo, observacao: row.observacao };
+            });
+            setMarcacoes(map);
+          }
+        });
+    } else {
+      setMarcacoes({});
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (currentQ?.id && marcacoes[currentQ.id]) {
+      setRevisaoMotivo(marcacoes[currentQ.id].motivo ?? null);
+      setRevisaoObs(marcacoes[currentQ.id].observacao ?? '');
+    } else {
+      setRevisaoMotivo(null);
+      setRevisaoObs('');
+    }
+  }, [currentQ?.id, isRevisaoModalOpen]);
+
+  const handleSaveMarcacao = async () => {
+    if (!session?.user?.id || !supabase || !currentQ?.id) return;
+    try {
+      const payload = {
+        user_id: session.user.id,
+        questao_id: currentQ.id,
+        motivo: revisaoMotivo,
+        observacao: revisaoObs.trim() ? revisaoObs.trim() : null
+      };
+      const { error } = await supabase
+        .from('marcacoes_revisao')
+        .upsert(payload, { onConflict: 'user_id,questao_id' });
+      if (error) {
+        console.error('Erro ao salvar marcação:', error);
+        showNotification("Erro ao salvar marcação. Tente novamente.");
+        return;
+      }
+      setMarcacoes(prev => ({
+        ...prev,
+        [currentQ.id]: { motivo: revisaoMotivo, observacao: revisaoObs.trim() ? revisaoObs.trim() : null }
+      }));
+      showNotification("Questão marcada para revisão!");
+      setIsRevisaoModalOpen(false);
+    } catch (e) {
+      console.error('Erro ao salvar marcação:', e);
+    }
+  };
+
+  const handleRemoveMarcacao = async () => {
+    if (!session?.user?.id || !supabase || !currentQ?.id) return;
+    try {
+      const { error } = await supabase
+        .from('marcacoes_revisao')
+        .delete()
+        .match({ user_id: session.user.id, questao_id: currentQ.id });
+      if (error) {
+        console.error('Erro ao remover marcação:', error);
+        showNotification("Erro ao remover marcação. Tente novamente.");
+        return;
+      }
+      setMarcacoes(prev => {
+        const next = { ...prev };
+        delete next[currentQ.id];
+        return next;
+      });
+      showNotification("Marcação removida.");
+      setIsRevisaoModalOpen(false);
+    } catch (e) {
+      console.error('Erro ao remover marcação:', e);
+    }
+  };
+
   const handleSelectOption = (letra: string) => {
     if (answeredState) return;
     setSelectedOption(letra);
@@ -1906,16 +1992,6 @@ export default function App() {
     showNotification(`Desafio Focado iniciado com ${roundQuestions.length} questões!`);
     setActiveTab('ofensivas');
     setOfensivasSubTab('simulado');
-  };
-
-  const handleToggleFavorite = () => {
-    if (favoriteIds.includes(currentQ.id)) {
-      setFavoriteIds(favoriteIds.filter(id => id !== currentQ.id));
-      showNotification("Questão removida dos favoritos.");
-    } else {
-      setFavoriteIds([...favoriteIds, currentQ.id]);
-      showNotification("Questão salva no seu caderno de favoritos!");
-    }
   };
 
   const handleDownloadTemplate = () => {
@@ -2952,12 +3028,18 @@ export default function App() {
 
                                   <div className="flex items-center gap-1 text-on-surface-variant">
                                     <button
-                                      onClick={handleToggleFavorite}
+                                      onClick={() => {
+                                        if (!isSupabaseConfigured() || !session?.user?.id) {
+                                          showNotification("Entre na sua conta para marcar questões para revisar.");
+                                          return;
+                                        }
+                                        setIsRevisaoModalOpen(true);
+                                      }}
                                       className="p-1.5 rounded-lg hover:bg-surface-container-low transition-colors"
-                                      title="Salvar nos Favoritos"
+                                      title="Marcar para Revisar"
                                     >
-                                      <span className={`material-symbols-outlined text-[20px] ${favoriteIds.includes(currentQ.id) ? 'text-tertiary font-bold' : ''}`}>
-                                        {favoriteIds.includes(currentQ.id) ? 'bookmark' : 'bookmark_border'}
+                                      <span className={`material-symbols-outlined text-[20px] ${marcacoes[currentQ.id] ? 'text-tertiary font-bold' : ''}`} style={{ fontVariationSettings: marcacoes[currentQ.id] ? "'FILL' 1" : "'FILL' 0" }}>
+                                        flag
                                       </span>
                                     </button>
                                     <button onClick={() => showNotification("Link permanente copiado.")} className="p-1.5 rounded-lg hover:bg-surface-container-low transition-colors" title="Compartilhar">
@@ -4900,6 +4982,102 @@ CREATE POLICY "Permitir acesso total em questoes acertocerto" ON acertocerto.que
               >
                 Entendi, Fechar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL MARCAR REVISÃO ================= */}
+      {isRevisaoModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="max-w-md w-full bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-xl space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-tertiary">flag</span>
+                Marcar para Revisar
+              </h3>
+              <button
+                onClick={() => setIsRevisaoModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-surface-container-low text-on-surface-variant transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-on-surface-variant">
+              Questão ID: <span className="font-mono font-semibold text-on-surface">{currentQ?.id}</span>. Selecione o motivo da revisão e adicione anotações se desejar.
+            </p>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-on-surface">Motivo da Marcação</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: null, label: 'Sem motivo específico' },
+                  { key: 'duvida', label: 'Dúvida' },
+                  { key: 'memorizar', label: 'Memorizar' },
+                  { key: 'suspeita_erro', label: 'Suspeita de erro' },
+                ].map(item => (
+                  <button
+                    key={String(item.key)}
+                    type="button"
+                    onClick={() => setRevisaoMotivo(item.key as any)}
+                    className={`p-2.5 rounded-xl text-xs font-semibold border transition-all text-left flex items-center gap-2 ${
+                      revisaoMotivo === item.key
+                        ? 'bg-tertiary-container text-on-tertiary-container border-tertiary'
+                        : 'bg-surface-container-low text-on-surface border-outline-variant/30 hover:border-outline'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${revisaoMotivo === item.key ? 'bg-tertiary' : 'bg-outline-variant'}`}></span>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-on-surface">Observações (opcional, máx. 500 caracteres)</label>
+              <textarea
+                value={revisaoObs}
+                onChange={e => setRevisaoObs(e.target.value.slice(0, 500))}
+                placeholder="Ex: Confundi a alternativa B com a C..."
+                className="w-full p-3 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface focus:outline-none focus:border-primary resize-none h-24"
+                maxLength={500}
+              />
+              <div className="text-right text-[10px] text-outline">
+                {revisaoObs.length}/500
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              {marcacoes[currentQ?.id] ? (
+                <button
+                  type="button"
+                  onClick={handleRemoveMarcacao}
+                  className="px-4 py-2.5 rounded-xl bg-error-container text-on-error-container font-label-md hover:opacity-90 text-xs flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                  Remover Marcação
+                </button>
+              ) : (
+                <div></div>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRevisaoModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-surface-container-high text-on-surface font-label-md hover:opacity-90 text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveMarcacao}
+                  className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md hover:opacity-90 text-xs shadow-sm flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">check</span>
+                  Salvar
+                </button>
+              </div>
             </div>
           </div>
         </div>

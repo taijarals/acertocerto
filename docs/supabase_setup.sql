@@ -43,11 +43,14 @@ CREATE TABLE IF NOT EXISTS acertocerto.respostas_usuario (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 5. Tabela de Favoritos
-CREATE TABLE IF NOT EXISTS acertocerto.favoritos (
+-- 5. Tabela de Marcações de Revisão
+CREATE TABLE IF NOT EXISTS acertocerto.marcacoes_revisao (
     user_id UUID,
     questao_id VARCHAR REFERENCES acertocerto.questoes(id) ON DELETE CASCADE,
+    motivo VARCHAR CHECK (motivo IN ('duvida', 'memorizar', 'suspeita_erro')),
+    observacao VARCHAR(500),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     PRIMARY KEY (user_id, questao_id)
 );
 
@@ -115,7 +118,7 @@ CREATE TABLE IF NOT EXISTS acertocerto.configuracoes_usuario (
 -- 11. Habilitar RLS (Row Level Security) nas tabelas
 ALTER TABLE acertocerto.questoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.respostas_usuario ENABLE ROW LEVEL SECURITY;
-ALTER TABLE acertocerto.favoritos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE acertocerto.marcacoes_revisao ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.simulados ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.tentativas_simulado ENABLE ROW LEVEL SECURITY;
 ALTER TABLE acertocerto.desafios ENABLE ROW LEVEL SECURITY;
@@ -126,7 +129,7 @@ ALTER TABLE acertocerto.configuracoes_usuario ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir leitura de questões para todos" ON acertocerto.questoes FOR SELECT USING (true);
 CREATE POLICY "Permitir inserção de questões" ON acertocerto.questoes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Permitir gestão de respostas do próprio usuário" ON acertocerto.respostas_usuario FOR ALL USING (true);
-CREATE POLICY "Permitir gestão de favoritos do próprio usuário" ON acertocerto.favoritos FOR ALL USING (true);
+CREATE POLICY "Permitir gestão de marcações de revisão do próprio usuário" ON acertocerto.marcacoes_revisao FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de simulados" ON acertocerto.simulados FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de tentativas de simulado" ON acertocerto.tentativas_simulado FOR ALL USING (true);
 CREATE POLICY "Permitir gestão de desafios" ON acertocerto.desafios FOR ALL USING (true);

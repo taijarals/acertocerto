@@ -12,7 +12,11 @@ O banco de dados PostgreSQL no Supabase utiliza o schema dedicado **`acertocerto
    - Registra cada resposta enviada pelo usuário.
    - Campos: `id`, `user_id`, `questao_id`, `resposta_usuario`, `acertou`, `tempo_segundos`, `created_at`.
 
-3. **`simulados`** & **`tentativas_simulado`**
+3. **`marcacoes_revisao`**
+   - Armazena questões marcadas pelo usuário para revisão posterior (com motivo e observação).
+   - Campos: `user_id`, `questao_id`, `motivo` ('duvida', 'memorizar', 'suspeita_erro' ou null), `observacao` (máx. 500 chars), `created_at`, `updated_at`.
+
+4. **`simulados`** & **`tentativas_simulado`**
    - Armazena configurações de simulados e histórico de tentativas e pontuações dos usuários.
 
 ## Funções RPC (Remote Procedure Calls)
